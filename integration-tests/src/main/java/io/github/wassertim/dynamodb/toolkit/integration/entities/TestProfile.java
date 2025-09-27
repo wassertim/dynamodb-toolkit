@@ -1,6 +1,10 @@
 package io.github.wassertim.dynamodb.toolkit.integration.entities;
 
 import io.github.wassertim.dynamodb.toolkit.api.annotations.DynamoMappable;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Nested entity to test complex object mapping and dependency resolution.
@@ -8,6 +12,10 @@ import io.github.wassertim.dynamodb.toolkit.api.annotations.DynamoMappable;
  * between @DynamoMappable classes.
  */
 @DynamoMappable
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class TestProfile {
 
     private String bio;
@@ -16,19 +24,7 @@ public class TestProfile {
     private Integer followers;
     private Integer following;
 
-    // Default constructor
-    public TestProfile() {}
-
-    // Builder constructor
-    public TestProfile(String bio, String location, String website, Integer followers, Integer following) {
-        this.bio = bio;
-        this.location = location;
-        this.website = website;
-        this.followers = followers;
-        this.following = following;
-    }
-
-    // Getters and setters
+    // Manual getters/setters for now (Lombok should generate these)
     public String getBio() { return bio; }
     public void setBio(String bio) { this.bio = bio; }
 
@@ -44,56 +40,27 @@ public class TestProfile {
     public Integer getFollowing() { return following; }
     public void setFollowing(Integer following) { this.following = following; }
 
-    // Builder pattern methods
-    public static Builder builder() {
-        return new Builder();
-    }
+    // Manual builder for now (Lombok should generate this)
+    public static TestProfileBuilder builder() { return new TestProfileBuilder(); }
 
-    public static class Builder {
-        private String bio;
-        private String location;
-        private String website;
-        private Integer followers;
-        private Integer following;
+    public static class TestProfileBuilder {
+        private String bio, location, website;
+        private Integer followers, following;
 
-        public Builder bio(String bio) {
-            this.bio = bio;
-            return this;
-        }
-
-        public Builder location(String location) {
-            this.location = location;
-            return this;
-        }
-
-        public Builder website(String website) {
-            this.website = website;
-            return this;
-        }
-
-        public Builder followers(Integer followers) {
-            this.followers = followers;
-            return this;
-        }
-
-        public Builder following(Integer following) {
-            this.following = following;
-            return this;
-        }
+        public TestProfileBuilder bio(String bio) { this.bio = bio; return this; }
+        public TestProfileBuilder location(String location) { this.location = location; return this; }
+        public TestProfileBuilder website(String website) { this.website = website; return this; }
+        public TestProfileBuilder followers(Integer followers) { this.followers = followers; return this; }
+        public TestProfileBuilder following(Integer following) { this.following = following; return this; }
 
         public TestProfile build() {
-            return new TestProfile(bio, location, website, followers, following);
+            TestProfile profile = new TestProfile();
+            profile.setBio(bio);
+            profile.setLocation(location);
+            profile.setWebsite(website);
+            profile.setFollowers(followers);
+            profile.setFollowing(following);
+            return profile;
         }
-    }
-
-    @Override
-    public String toString() {
-        return "TestProfile{" +
-                "bio='" + bio + '\'' +
-                ", location='" + location + '\'' +
-                ", website='" + website + '\'' +
-                ", followers=" + followers +
-                ", following=" + following +
-                '}';
     }
 }

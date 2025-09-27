@@ -8,6 +8,11 @@ import static org.assertj.core.api.Assertions.*;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import io.github.wassertim.dynamodb.toolkit.integration.entities.TestUser;
 import io.github.wassertim.dynamodb.toolkit.integration.entities.TestProfile;
+import io.github.wassertim.dynamodb.toolkit.mappers.TestUserMapper;
+import io.github.wassertim.dynamodb.toolkit.mappers.TestProfileMapper;
+import io.github.wassertim.dynamodb.toolkit.fields.TestUserFields;
+import io.github.wassertim.dynamodb.toolkit.fields.TestProfileFields;
+import io.github.wassertim.infrastructure.TableNameResolver;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -22,38 +27,41 @@ public class CodeGenerationIntegrationTest {
 
     private TestUser testUser;
     private TestProfile testProfile;
+    private TestUserMapper testUserMapper;
+    private TestProfileMapper testProfileMapper;
 
     @BeforeEach
     void setUp() {
-        testProfile = new TestProfile(
-            "Software Engineer passionate about distributed systems",
-            "San Francisco, CA",
-            "https://example.com",
-            150,
-            75
-        );
+        // Create test entities using builders
+        testProfile = TestProfile.builder()
+            .bio("Software Engineer passionate about distributed systems")
+            .location("San Francisco, CA")
+            .website("https://example.com")
+            .followers(150)
+            .following(75)
+            .build();
 
-        testUser = new TestUser(
-            "user123",
-            "test@example.com",
-            "John Doe",
-            30,
-            true,
-            Instant.parse("2024-01-15T10:30:00Z"),
-            Arrays.asList("developer", "java", "aws"),
-            testProfile
-        );
+        testUser = TestUser.builder()
+            .userId("user123")
+            .email("test@example.com")
+            .name("John Doe")
+            .age(30)
+            .active(true)
+            .createdAt(Instant.parse("2024-01-15T10:30:00Z"))
+            .tags(Arrays.asList("developer", "java", "aws"))
+            .profile(testProfile)
+            .build();
+
+        // Create mappers
+        testProfileMapper = new TestProfileMapper();
+        testUserMapper = new TestUserMapper(testProfileMapper);
     }
 
     @Test
     @DisplayName("Generated mapper classes work correctly for bidirectional conversion")
     void testGeneratedMappersWork() {
-        // Test that the generated mappers can actually convert objects
-        var profileMapper = new io.github.wassertim.dynamodb.toolkit.mappers.TestProfileMapper();
-        var userMapper = new io.github.wassertim.dynamodb.toolkit.mappers.TestUserMapper(profileMapper);
-
         // Test profile conversion
-        AttributeValue profileAttributeValue = profileMapper.toDynamoDbAttributeValue(testProfile);
+        AttributeValue profileAttributeValue = testProfileMapper.toDynamoDbAttributeValue(testProfile);
         assertThat(profileAttributeValue).isNotNull();
         assertThat(profileAttributeValue.hasM()).isTrue();
 
@@ -65,7 +73,7 @@ public class CodeGenerationIntegrationTest {
         assertThat(profileMap).containsKey("following");
 
         // Test profile round-trip conversion
-        TestProfile convertedProfile = profileMapper.fromDynamoDbAttributeValue(profileAttributeValue);
+        TestProfile convertedProfile = testProfileMapper.fromDynamoDbAttributeValue(profileAttributeValue);
         assertThat(convertedProfile).isNotNull();
         assertThat(convertedProfile.getBio()).isEqualTo(testProfile.getBio());
         assertThat(convertedProfile.getLocation()).isEqualTo(testProfile.getLocation());
@@ -74,7 +82,7 @@ public class CodeGenerationIntegrationTest {
         assertThat(convertedProfile.getFollowing()).isEqualTo(testProfile.getFollowing());
 
         // Test user conversion (includes complex object mapping)
-        AttributeValue userAttributeValue = userMapper.toDynamoDbAttributeValue(testUser);
+        AttributeValue userAttributeValue = testUserMapper.toDynamoDbAttributeValue(testUser);
         assertThat(userAttributeValue).isNotNull();
         assertThat(userAttributeValue.hasM()).isTrue();
 
@@ -89,7 +97,7 @@ public class CodeGenerationIntegrationTest {
         assertThat(userMap).containsKey("profile");
 
         // Test user round-trip conversion
-        TestUser convertedUser = userMapper.fromDynamoDbAttributeValue(userAttributeValue);
+        TestUser convertedUser = testUserMapper.fromDynamoDbAttributeValue(userAttributeValue);
         assertThat(convertedUser).isNotNull();
         assertThat(convertedUser.getUserId()).isEqualTo(testUser.getUserId());
         assertThat(convertedUser.getEmail()).isEqualTo(testUser.getEmail());
@@ -106,9 +114,44 @@ public class CodeGenerationIntegrationTest {
     }
 
     @Test
-    @DisplayName("Test entity structure is correct for annotation processing")
+    @DisplayName("Generated field constants are accessible and correct")
+    void testGeneratedFieldConstants() {
+        // TestUserFields should contain all field names
+        assertThat(TestUserFields.userId).isEqualTo("userId");
+        assertThat(TestUserFields.email).isEqualTo("email");
+        assertThat(TestUserFields.name).isEqualTo("name");
+        assertThat(TestUserFields.age).isEqualTo("age");
+        assertThat(TestUserFields.active).isEqualTo("active");
+        assertThat(TestUserFields.createdAt).isEqualTo("createdAt");
+        assertThat(TestUserFields.tags).isEqualTo("tags");
+        assertThat(TestUserFields.profile).isEqualTo("profile");
+
+        // TestProfileFields should contain all field names
+        assertThat(TestProfileFields.bio).isEqualTo("bio");
+        assertThat(TestProfileFields.location).isEqualTo("location");
+        assertThat(TestProfileFields.website).isEqualTo("website");
+        assertThat(TestProfileFields.followers).isEqualTo("followers");
+        assertThat(TestProfileFields.following).isEqualTo("following");
+    }
+
+    @Test
+    @DisplayName("Generated TableNameResolver works correctly")
+    void testGeneratedTableNameResolver() {
+        // TestUser has @Table(name = "test-users")
+        String tableName = TableNameResolver.resolveTableName(TestUser.class);
+        assertThat(tableName).isEqualTo("test-users");
+
+        // Test error case for unknown table
+        assertThatThrownBy(() -> {
+            TableNameResolver.resolveTableName(String.class);
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Unknown @Table annotated class");
+    }
+
+    @Test
+    @DisplayName("Test entity structure and builders work correctly")
     void testEntityStructure() {
-        // Verify that our test entities have the required structure
+        // Verify that our test entities have the expected data
         assertThat(testUser.getUserId()).isEqualTo("user123");
         assertThat(testUser.getEmail()).isEqualTo("test@example.com");
         assertThat(testUser.getName()).isEqualTo("John Doe");
@@ -123,57 +166,5 @@ public class CodeGenerationIntegrationTest {
         assertThat(testProfile.getWebsite()).isEqualTo("https://example.com");
         assertThat(testProfile.getFollowers()).isEqualTo(150);
         assertThat(testProfile.getFollowing()).isEqualTo(75);
-    }
-
-    @Test
-    @DisplayName("Verify annotation processing will handle dependencies correctly")
-    void testDependencyStructure() {
-        // TestUser depends on TestProfile
-        // The annotation processor should:
-        // 1. Detect that TestUser has a field of type TestProfile
-        // 2. Ensure TestProfile mapper is generated first
-        // 3. Inject TestProfileMapper into TestUserMapper constructor
-
-        // For now, just verify the dependency relationship exists
-        assertThat(testUser.getProfile()).isInstanceOf(TestProfile.class);
-        assertThat(testUser.getProfile()).isNotNull();
-    }
-
-    @Test
-    @DisplayName("Generated field constants should be accessible and correct")
-    void testGeneratedFieldConstants() {
-        // Test that field constants are generated and accessible
-
-        // TestUserFields should contain all field names
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestUserFields.userId).isEqualTo("userId");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestUserFields.email).isEqualTo("email");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestUserFields.name).isEqualTo("name");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestUserFields.age).isEqualTo("age");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestUserFields.active).isEqualTo("active");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestUserFields.createdAt).isEqualTo("createdAt");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestUserFields.tags).isEqualTo("tags");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestUserFields.profile).isEqualTo("profile");
-
-        // TestProfileFields should contain all field names
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestProfileFields.bio).isEqualTo("bio");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestProfileFields.location).isEqualTo("location");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestProfileFields.website).isEqualTo("website");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestProfileFields.followers).isEqualTo("followers");
-        assertThat(io.github.wassertim.dynamodb.toolkit.fields.TestProfileFields.following).isEqualTo("following");
-    }
-
-    @Test
-    @DisplayName("Generated TableNameResolver should work correctly")
-    void testGeneratedTableNameResolver() {
-        // Test that TableNameResolver is generated and works correctly
-        // TestUser has @Table(name = "test-users")
-        String tableName = io.github.wassertim.infrastructure.TableNameResolver.resolveTableName(TestUser.class);
-        assertThat(tableName).isEqualTo("test-users");
-
-        // Test error case for unknown table
-        assertThatThrownBy(() -> {
-            io.github.wassertim.infrastructure.TableNameResolver.resolveTableName(String.class);
-        }).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("Unknown @Table annotated class");
     }
 }

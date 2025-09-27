@@ -4,6 +4,10 @@ import io.github.wassertim.dynamodb.toolkit.api.annotations.DynamoMappable;
 import io.github.wassertim.dynamodb.toolkit.api.annotations.Table;
 import io.github.wassertim.dynamodb.toolkit.api.annotations.PartitionKey;
 import io.github.wassertim.dynamodb.toolkit.api.annotations.SortKey;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.util.List;
@@ -15,6 +19,10 @@ import java.util.List;
  */
 @DynamoMappable
 @Table(name = "test-users")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class TestUser {
 
     @PartitionKey
@@ -30,23 +38,7 @@ public class TestUser {
     private List<String> tags;
     private TestProfile profile;  // Will require TestProfile to also be @DynamoMappable
 
-    // Default constructor for DynamoDB
-    public TestUser() {}
-
-    // Builder constructor
-    public TestUser(String userId, String email, String name, Integer age, Boolean active,
-                   Instant createdAt, List<String> tags, TestProfile profile) {
-        this.userId = userId;
-        this.email = email;
-        this.name = name;
-        this.age = age;
-        this.active = active;
-        this.createdAt = createdAt;
-        this.tags = tags;
-        this.profile = profile;
-    }
-
-    // Getters and setters
+    // Manual getters/setters for now (Lombok should generate these)
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
@@ -71,77 +63,37 @@ public class TestUser {
     public TestProfile getProfile() { return profile; }
     public void setProfile(TestProfile profile) { this.profile = profile; }
 
-    // Builder pattern methods
-    public static Builder builder() {
-        return new Builder();
-    }
+    // Manual builder for now (Lombok should generate this)
+    public static TestUserBuilder builder() { return new TestUserBuilder(); }
 
-    public static class Builder {
-        private String userId;
-        private String email;
-        private String name;
+    public static class TestUserBuilder {
+        private String userId, email, name;
         private Integer age;
         private Boolean active;
         private Instant createdAt;
         private List<String> tags;
         private TestProfile profile;
 
-        public Builder userId(String userId) {
-            this.userId = userId;
-            return this;
-        }
-
-        public Builder email(String email) {
-            this.email = email;
-            return this;
-        }
-
-        public Builder name(String name) {
-            this.name = name;
-            return this;
-        }
-
-        public Builder age(Integer age) {
-            this.age = age;
-            return this;
-        }
-
-        public Builder active(Boolean active) {
-            this.active = active;
-            return this;
-        }
-
-        public Builder createdAt(Instant createdAt) {
-            this.createdAt = createdAt;
-            return this;
-        }
-
-        public Builder tags(List<String> tags) {
-            this.tags = tags;
-            return this;
-        }
-
-        public Builder profile(TestProfile profile) {
-            this.profile = profile;
-            return this;
-        }
+        public TestUserBuilder userId(String userId) { this.userId = userId; return this; }
+        public TestUserBuilder email(String email) { this.email = email; return this; }
+        public TestUserBuilder name(String name) { this.name = name; return this; }
+        public TestUserBuilder age(Integer age) { this.age = age; return this; }
+        public TestUserBuilder active(Boolean active) { this.active = active; return this; }
+        public TestUserBuilder createdAt(Instant createdAt) { this.createdAt = createdAt; return this; }
+        public TestUserBuilder tags(List<String> tags) { this.tags = tags; return this; }
+        public TestUserBuilder profile(TestProfile profile) { this.profile = profile; return this; }
 
         public TestUser build() {
-            return new TestUser(userId, email, name, age, active, createdAt, tags, profile);
+            TestUser user = new TestUser();
+            user.setUserId(userId);
+            user.setEmail(email);
+            user.setName(name);
+            user.setAge(age);
+            user.setActive(active);
+            user.setCreatedAt(createdAt);
+            user.setTags(tags);
+            user.setProfile(profile);
+            return user;
         }
-    }
-
-    @Override
-    public String toString() {
-        return "TestUser{" +
-                "userId='" + userId + '\'' +
-                ", email='" + email + '\'' +
-                ", name='" + name + '\'' +
-                ", age=" + age +
-                ", active=" + active +
-                ", createdAt=" + createdAt +
-                ", tags=" + tags +
-                ", profile=" + profile +
-                '}';
     }
 }
