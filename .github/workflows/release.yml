@@ -165,16 +165,16 @@ jobs:
           status_response=$(curl -s "https://jitpack.io/api/builds/com.github.wassertim/dynamodb-toolkit/v$NEW_VERSION")
           echo "Status response: $status_response"
 
-          if [[ "$status_response" == *'"status":"ok"'* ]]; then
+          if [[ "$status_response" == *'"status" : "ok"'* ]]; then
             echo "✅ JitPack build completed successfully!"
             echo "📦 Artifact available at: https://jitpack.io/#wassertim/dynamodb-toolkit/v$NEW_VERSION"
             echo "🔗 Build log: https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION/build.log"
             exit 0
-          elif [[ "$status_response" == *'"status":"error"'* ]]; then
+          elif [[ "$status_response" == *'"status" : "error"'* ]]; then
             echo "❌ JitPack build failed!"
             echo "🔗 Check logs at: https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION/build.log"
             exit 1
-          elif [[ "$status_response" == *'"status":"building"'* ]]; then
+          elif [[ "$status_response" == *'"status" : "building"'* ]]; then
             echo "⏳ Build in progress..."
           else
             echo "⏳ Build queued or starting..."
