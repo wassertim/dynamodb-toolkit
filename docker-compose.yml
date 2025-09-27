@@ -7,9 +7,9 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/workspace:cached
-      - devcontainer-shell-history:/root/.shell_history
-      - claude-auth:/root/.config/claude
-      - github-cli-auth:/root/.config/gh
+      - devcontainer-shell-history:/home/ubuntu/.shell_history
+      - claude-auth:/home/ubuntu/.config/claude
+      - github-cli-auth:/home/ubuntu/.config/gh
     working_dir: /workspace
     command: sleep infinity
     depends_on:

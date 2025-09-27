@@ -16,5 +16,5 @@
     }
   },
   "postCreateCommand": "echo 'Java development environment with Claude Code ready'",
-  "remoteUser": "root"
+  "remoteUser": "ubuntu"
 }
