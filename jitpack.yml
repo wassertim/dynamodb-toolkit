@@ -2,6 +2,5 @@ jdk:
   - openjdk21
 before_install:
   - sed -i "s/\${dynamodb-toolkit.version}/$VERSION/g" pom.xml
-  - sed -i "s/\${dynamodb-toolkit.version}/$VERSION/g" integration-tests/pom.xml
 install:
   - mvn clean install -DskipTests=true
