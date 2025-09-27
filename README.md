@@ -100,8 +100,8 @@ Add the annotation processor to your Maven build:
 
 ```xml
 <dependency>
-    <groupId>com.tourino</groupId>
-    <artifactId>dynamodb-mapping-lib</artifactId>
+    <groupId>io.github.wassertim</groupId>
+    <artifactId>dynamodb-toolkit</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 </dependency>
 ```

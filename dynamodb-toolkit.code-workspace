@@ -1,0 +1,23 @@
+{
+    "folders": [
+        {
+            "name": "DynamoDB Toolkit Library",
+            "path": "."
+        },
+        {
+            "name": "Integration Tests",
+            "path": "./integration-tests"
+        }
+    ],
+    "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic",
+        "java.compile.nullAnalysis.mode": "automatic",
+        "java.import.maven.enabled": true,
+        "java.configuration.maven.userSettings": null
+    },
+    "extensions": {
+        "recommendations": [
+            "vscjava.vscode-java-pack"
+        ]
+    }
+}
