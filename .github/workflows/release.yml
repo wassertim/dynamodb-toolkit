@@ -143,6 +143,16 @@ jobs:
         draft: false
         prerelease: false
 
+    - name: Wait for tag propagation
+      run: sleep 30
+
     - name: Trigger JitPack build
       run: |
-        curl -s "https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION"
+        echo "Triggering JitPack build for v$NEW_VERSION"
+        response=$(curl -s "https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION")
+        echo "JitPack response: $response"
+        if [[ "$response" == *"Build started"* ]] || [[ "$response" == *"OK"* ]]; then
+          echo "✅ JitPack build triggered successfully"
+        else
+          echo "⚠️ JitPack build may have failed, check https://jitpack.io/#wassertim/dynamodb-toolkit"
+        fi
