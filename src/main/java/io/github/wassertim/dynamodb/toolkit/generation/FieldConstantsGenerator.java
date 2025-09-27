@@ -3,7 +3,6 @@ package io.github.wassertim.dynamodb.toolkit.generation;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.Instant;
-import java.util.Set;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
