@@ -143,16 +143,46 @@ jobs:
         draft: false
         prerelease: false
 
-    - name: Wait for tag propagation
-      run: sleep 30
-
-    - name: Trigger JitPack build
+    - name: Trigger and monitor JitPack build
       run: |
-        echo "Triggering JitPack build for v$NEW_VERSION"
-        response=$(curl -s "https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION")
-        echo "JitPack response: $response"
-        if [[ "$response" == *"Build started"* ]] || [[ "$response" == *"OK"* ]]; then
-          echo "✅ JitPack build triggered successfully"
-        else
-          echo "⚠️ JitPack build may have failed, check https://jitpack.io/#wassertim/dynamodb-toolkit"
-        fi
+        echo "🚀 Triggering JitPack build for v$NEW_VERSION"
+
+        # Trigger the build
+        trigger_response=$(curl -s "https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION")
+        echo "Trigger response: $trigger_response"
+
+        # Check build status with polling
+        echo "📋 Monitoring build status..."
+        max_attempts=20  # 10 minutes max (30s * 20)
+        attempt=1
+
+        while [ $attempt -le $max_attempts ]; do
+          echo "🔍 Checking build status (attempt $attempt/$max_attempts)..."
+
+          # Check build status via the builds API
+          status_response=$(curl -s "https://jitpack.io/api/builds/com.github.wassertim/dynamodb-toolkit/v$NEW_VERSION")
+          echo "Status response: $status_response"
+
+          if [[ "$status_response" == *'"status":"ok"'* ]]; then
+            echo "✅ JitPack build completed successfully!"
+            echo "📦 Artifact available at: https://jitpack.io/#wassertim/dynamodb-toolkit/v$NEW_VERSION"
+            exit 0
+          elif [[ "$status_response" == *'"status":"error"'* ]]; then
+            echo "❌ JitPack build failed!"
+            echo "🔗 Check logs at: https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION/build.log"
+            exit 1
+          elif [[ "$status_response" == *'"status":"building"'* ]]; then
+            echo "⏳ Build in progress..."
+          else
+            echo "⏳ Build queued or starting..."
+          fi
+
+          if [ $attempt -eq $max_attempts ]; then
+            echo "⏰ Build timeout reached (10 minutes)"
+            echo "🔗 Check status manually at: https://jitpack.io/#wassertim/dynamodb-toolkit"
+            exit 1
+          fi
+
+          sleep 30
+          attempt=$((attempt + 1))
+        done
