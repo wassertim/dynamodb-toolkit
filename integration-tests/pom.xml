@@ -6,7 +6,7 @@
 
     <groupId>io.github.wassertim</groupId>
     <artifactId>dynamodb-toolkit-integration-tests</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>${dynamodb-toolkit.version}</version>
 
     <name>DynamoDB Toolkit Integration Tests</name>
     <description>Integration tests for DynamoDB Toolkit library with real entities and annotation processing</description>
@@ -16,6 +16,9 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- Project version -->
+        <dynamodb-toolkit.version>1.0.0-SNAPSHOT</dynamodb-toolkit.version>
 
         <!-- Dependency versions -->
         <aws.sdk.version>2.29.39</aws.sdk.version>
@@ -30,7 +33,7 @@
         <dependency>
             <groupId>io.github.wassertim</groupId>
             <artifactId>dynamodb-toolkit</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>${dynamodb-toolkit.version}</version>
         </dependency>
 
         <!-- Core dependencies needed for test entities -->
@@ -85,7 +88,7 @@
                         <path>
                             <groupId>io.github.wassertim</groupId>
                             <artifactId>dynamodb-toolkit</artifactId>
-                            <version>1.0.0-SNAPSHOT</version>
+                            <version>${dynamodb-toolkit.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
