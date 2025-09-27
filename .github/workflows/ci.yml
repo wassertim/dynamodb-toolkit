@@ -34,13 +34,3 @@ jobs:
       run: |
         cd integration-tests
         mvn clean test
-
-  jitpack-test:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-    - name: Trigger JitPack build for main branch
-      run: |
-        echo "Triggering JitPack build for main-SNAPSHOT"
-        curl -s "https://jitpack.io/com/github/wassertim/dynamodb-toolkit/main-SNAPSHOT" || true
