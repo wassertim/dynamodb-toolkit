@@ -10,6 +10,8 @@ services:
       - devcontainer-shell-history:/home/ubuntu/.shell_history
       - claude-auth:/home/ubuntu/.config/claude
       - github-cli-auth:/home/ubuntu/.config/gh
+      - ${PWD}/.claude:/home/ubuntu/.claude:cached
+      - ${HOME}/.claude.json:/home/ubuntu/.claude.json:cached
     working_dir: /workspace
     command: sleep infinity
     depends_on:
