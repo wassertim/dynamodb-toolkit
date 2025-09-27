@@ -1,8 +1,11 @@
 {
   "name": "DynamoDB Toolkit Dev Environment",
-  "dockerComposeFile": "docker-compose.yml",
+  "dockerComposeFile": "../docker-compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
+  "containerEnv": {
+    "GH_TOKEN": "${localEnv:GH_TOKEN}"
+  },
   "customizations": {
     "vscode": {
       "extensions": [
