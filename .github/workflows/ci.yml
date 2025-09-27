@@ -27,21 +27,13 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
-    - name: Run tests - Main Library
-      run: mvn clean test
+    - name: Build and test main library
+      run: mvn clean install
 
-    - name: Run tests - Integration Tests
+    - name: Test integration tests
       run: |
         cd integration-tests
         mvn clean test
-
-    - name: Build library
-      run: mvn clean compile
-
-    - name: Build integration tests
-      run: |
-        cd integration-tests
-        mvn clean compile
 
   jitpack-test:
     runs-on: ubuntu-latest

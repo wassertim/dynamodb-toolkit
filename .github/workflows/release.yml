@@ -42,10 +42,13 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-    - name: Run tests
+    - name: Build and test main library
+      run: mvn clean install
+
+    - name: Test integration tests
       run: |
+        cd integration-tests
         mvn clean test
-        cd integration-tests && mvn clean test
 
     - name: Prepare release
       run: |
@@ -76,7 +79,7 @@ jobs:
 
     - name: Build and verify
       run: |
-        mvn clean compile
+        mvn clean install
         cd integration-tests && mvn clean compile
 
     - name: Commit and tag release
