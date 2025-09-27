@@ -1,0 +1,17 @@
+{
+  "name": "DynamoDB Toolkit Dev Environment",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-maven",
+        "redhat.java"
+      ]
+    }
+  },
+  "postCreateCommand": "echo 'Java development environment with Claude Code ready'",
+  "remoteUser": "root"
+}
