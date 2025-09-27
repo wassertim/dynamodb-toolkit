@@ -18,7 +18,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- Project version -->
-        <dynamodb-toolkit.version>1.0.19</dynamodb-toolkit.version>
+        <dynamodb-toolkit.version>1.0.20-SNAPSHOT</dynamodb-toolkit.version>
 
         <!-- Dependency versions -->
         <aws.sdk.version>2.29.39</aws.sdk.version>
