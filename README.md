@@ -126,3 +126,15 @@ For each `@DynamoMappable` class, the processor generates:
 - **Dependency injection**: Constructor injection for required mappers
 - **Null safety**: Proper null handling throughout mapping logic
 - **Error handling**: Safe parsing with fallback to null values
+
+## Known Issues
+
+### Java/Maven Compatibility Warnings
+
+When using Java 21+ with Maven, you may see warnings like:
+```
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.google.inject.internal.aop.HiddenClassDefiner
+```
+
+These warnings are **harmless** and come from Google Guice (bundled with Maven), not from this library. They will be resolved when Maven updates to a newer Guice version. The warnings do not affect functionality and can be safely ignored.

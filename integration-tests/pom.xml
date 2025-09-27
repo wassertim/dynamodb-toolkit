@@ -78,8 +78,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.14.0</version>
                 <configuration>
-                    <source>${maven.compiler.source}</source>
-                    <target>${maven.compiler.target}</target>
+                    <release>21</release>
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <!-- Re-enable DynamoDB Toolkit annotation processor -->
                     <annotationProcessorPaths>
