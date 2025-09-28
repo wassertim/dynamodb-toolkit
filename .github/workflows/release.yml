@@ -188,7 +188,7 @@ jobs:
               echo "🔗 Build log: https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION/build.log"
               exit 0
               ;;
-            "error")
+            "error"|"Error")
               echo "❌ JitPack build failed!"
               echo "🔗 Check logs at: https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION/build.log"
               exit 1
@@ -199,8 +199,12 @@ jobs:
             "tagNotFound")
               echo "⚠️  Tag not found yet, waiting for Git sync..."
               ;;
+            "")
+              echo "⚠️  Unable to parse status from response"
+              ;;
             *)
-              echo "⏳ Build status: $status"
+              echo "⚠️  Unknown build status: $status"
+              echo "🔗 Check manually at: https://jitpack.io/#wassertim/dynamodb-toolkit/v$NEW_VERSION"
               ;;
           esac
 
