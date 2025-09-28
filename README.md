@@ -1,5 +1,7 @@
 # DynamoDB Mapping Library
 
+[![](https://jitpack.io/v/wassertim/dynamodb-toolkit.svg)](https://jitpack.io/#wassertim/dynamodb-toolkit)
+
 Annotation-driven DynamoDB mapping library with automatic dependency resolution and compile-time code generation for type-safe bidirectional conversion between domain objects and DynamoDB AttributeValue format.
 
 ## Features
