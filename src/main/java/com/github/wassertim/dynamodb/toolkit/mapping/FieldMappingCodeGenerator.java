@@ -17,11 +17,9 @@ import java.util.ArrayList;
  */
 public class FieldMappingCodeGenerator {
 
-    private final TypeExtractor typeExtractor;
     private final MappingCodeGeneratorUtils utils;
 
     public FieldMappingCodeGenerator(TypeExtractor typeExtractor) {
-        this.typeExtractor = typeExtractor;
         this.utils = new MappingCodeGeneratorUtils(typeExtractor);
     }
 
@@ -348,38 +346,4 @@ public class FieldMappingCodeGenerator {
                 .build();
     }
 
-    // Backward compatibility methods for existing PrintWriter-based MapperGenerator
-    // TODO: Remove these when MapperGenerator is converted to JavaPoet
-
-    /**
-     * @deprecated Use generateToAttributeValueMapping(FieldInfo, String) instead
-     */
-    @Deprecated
-    public void generateToAttributeValueMapping(java.io.PrintWriter writer, FieldInfo field, String objectName) {
-        CodeBlock code = generateToAttributeValueMapping(field, objectName);
-        String[] lines = code.toString().split("\n");
-        for (String line : lines) {
-            if (!line.trim().isEmpty()) {
-                writer.println("        " + line);
-            } else {
-                writer.println();
-            }
-        }
-    }
-
-    /**
-     * @deprecated Use generateFromAttributeValueMapping(FieldInfo) instead
-     */
-    @Deprecated
-    public void generateFromAttributeValueMapping(java.io.PrintWriter writer, FieldInfo field) {
-        CodeBlock code = generateFromAttributeValueMapping(field);
-        String[] lines = code.toString().split("\n");
-        for (String line : lines) {
-            if (!line.trim().isEmpty()) {
-                writer.println("        " + line);
-            } else {
-                writer.println();
-            }
-        }
-    }
 }

@@ -126,21 +126,4 @@ public class ConvenienceMethodGenerator {
                 .build();
     }
 
-    /**
-     * @deprecated Use generateConvenienceMethods(TypeInfo) instead
-     */
-    @Deprecated
-    public void generateConvenienceMethods(java.io.PrintWriter writer, TypeInfo typeInfo) {
-        List<MethodSpec> methods = generateConvenienceMethods(typeInfo);
-        for (MethodSpec method : methods) {
-            String[] lines = method.toString().split("\\n");
-            for (String line : lines) {
-                if (!line.trim().isEmpty()) {
-                    writer.println("    " + line);
-                } else {
-                    writer.println();
-                }
-            }
-        }
-    }
 }

@@ -46,8 +46,6 @@ public class DependencyInjectionGenerator {
      * Generates dependency injection constructor for a mapper class using JavaPoet.
      */
     public MethodSpec generateConstructor(TypeInfo typeInfo, Set<String> dependencies) {
-        String mapperClassName = typeInfo.getMapperClassName();
-
         MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder()
                 .addModifiers(Modifier.PUBLIC);
 
@@ -62,35 +60,5 @@ public class DependencyInjectionGenerator {
         return constructorBuilder.build();
     }
 
-    /**
-     * @deprecated Use generateDependencyFields(Set<String>) instead
-     */
-    @Deprecated
-    public void generateConstructorAndFields(java.io.PrintWriter writer, TypeInfo typeInfo, Set<String> dependencies) {
-        if (dependencies.isEmpty()) {
-            writer.println("    // No dependencies required");
-            writer.println();
-            return;
-        }
-
-        // Generate dependency fields
-        List<FieldSpec> fields = generateDependencyFields(dependencies);
-        for (FieldSpec field : fields) {
-            writer.println("    " + field.toString());
-        }
-        writer.println();
-
-        // Generate constructor
-        MethodSpec constructor = generateConstructor(typeInfo, dependencies);
-        String[] lines = constructor.toString().split("\n");
-        for (String line : lines) {
-            if (!line.trim().isEmpty()) {
-                writer.println("    " + line);
-            } else {
-                writer.println();
-            }
-        }
-        writer.println();
-    }
 
 }
