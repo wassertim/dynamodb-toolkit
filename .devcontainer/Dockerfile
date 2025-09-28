@@ -18,6 +18,15 @@ RUN curl -fsSL https://claude.ai/install.sh | bash && \
     echo 'export PATH="$HOME/.local/bin:$HOME/bin:$PATH"' >> /root/.bashrc && \
     echo 'export PATH="$HOME/.local/bin:$HOME/bin:$PATH"' >> /root/.zshrc
 
+# Install Docker CLI using official Docker repository
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y docker-ce-cli && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install AWS CLI
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
@@ -66,7 +75,10 @@ RUN mkdir -p /root/.shell_history && \
 # Configure existing ubuntu user for Claude Code compatibility (use existing UID 1000)
 RUN usermod --shell /bin/zsh ubuntu && \
     # Give ubuntu sudo access
-    echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+    echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
+    # Add ubuntu user to docker group for Docker socket access
+    groupadd -f docker && \
+    usermod -aG docker ubuntu
 
 # Switch to ubuntu user and set up user-specific configurations
 USER ubuntu
