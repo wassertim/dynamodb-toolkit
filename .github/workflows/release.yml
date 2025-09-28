@@ -82,6 +82,9 @@ jobs:
         sed -i "s/<dynamodb-toolkit.version>.*<\/dynamodb-toolkit.version>/<dynamodb-toolkit.version>$NEW_VERSION<\/dynamodb-toolkit.version>/" pom.xml
         sed -i "s/<dynamodb-toolkit.version>.*<\/dynamodb-toolkit.version>/<dynamodb-toolkit.version>$NEW_VERSION<\/dynamodb-toolkit.version>/" integration-tests/pom.xml
 
+        # Update version in README.md
+        sed -i "s/<version>v[^<]*<\/version>/<version>v$NEW_VERSION<\/version>/" README.md
+
     - name: Build and verify
       run: |
         mvn clean install
@@ -89,7 +92,7 @@ jobs:
 
     - name: Commit and tag release
       run: |
-        git add pom.xml integration-tests/pom.xml
+        git add pom.xml integration-tests/pom.xml README.md
         git commit -m "Release version $NEW_VERSION"
         git tag -a "v$NEW_VERSION" -m "Release version $NEW_VERSION"
 

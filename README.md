@@ -96,15 +96,24 @@ public class DynamoDbRoutesRepository implements RoutesRepository {
 
 ## Build Integration
 
-Add the annotation processor to your Maven build:
+Add the JitPack repository and dependency to your Maven build:
 
 ```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+
 <dependency>
-    <groupId>io.github.wassertim</groupId>
+    <groupId>com.github.wassertim</groupId>
     <artifactId>dynamodb-toolkit</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>v1.0.20</version>
 </dependency>
 ```
+
+See [JitPack releases](https://jitpack.io/#wassertim/dynamodb-toolkit) for the latest version.
 
 The annotation processor runs automatically during compilation and generates mapper classes in the same package as your domain classes.
 
