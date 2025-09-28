@@ -174,26 +174,32 @@ jobs:
 
           # Check build status via the builds API
           status_response=$(curl -s "https://jitpack.io/api/builds/com.github.wassertim/dynamodb-toolkit/v$NEW_VERSION")
-          echo "Status response: $status_response"
 
-          # Debug: Show what we're matching against
-          echo "Checking for pattern: '\"status\" : \"ok\"'"
+          # Parse status and show clean output
+          status=$(echo "$status_response" | grep -o '"status" : "[^"]*"' | cut -d'"' -f4)
 
-          # Use grep for more reliable pattern matching
-          if echo "$status_response" | grep -q '"status" : "ok"'; then
-            echo "✅ JitPack build completed successfully!"
-            echo "📦 Artifact available at: https://jitpack.io/#wassertim/dynamodb-toolkit/v$NEW_VERSION"
-            echo "🔗 Build log: https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION/build.log"
-            exit 0
-          elif echo "$status_response" | grep -q '"status" : "error"'; then
-            echo "❌ JitPack build failed!"
-            echo "🔗 Check logs at: https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION/build.log"
-            exit 1
-          elif echo "$status_response" | grep -q '"status" : "building"'; then
-            echo "⏳ Build in progress..."
-          else
-            echo "⏳ Build queued or starting..."
-          fi
+          case "$status" in
+            "ok")
+              echo "✅ JitPack build completed successfully!"
+              echo "📦 Artifact available at: https://jitpack.io/#wassertim/dynamodb-toolkit/v$NEW_VERSION"
+              echo "🔗 Build log: https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION/build.log"
+              exit 0
+              ;;
+            "error")
+              echo "❌ JitPack build failed!"
+              echo "🔗 Check logs at: https://jitpack.io/com/github/wassertim/dynamodb-toolkit/v$NEW_VERSION/build.log"
+              exit 1
+              ;;
+            "none")
+              echo "⏳ Build in progress..."
+              ;;
+            "tagNotFound")
+              echo "⚠️  Tag not found yet, waiting for Git sync..."
+              ;;
+            *)
+              echo "⏳ Build status: $status"
+              ;;
+          esac
 
           if [ $attempt -eq $max_attempts ]; then
             echo "⏰ Build timeout reached (10 minutes)"
