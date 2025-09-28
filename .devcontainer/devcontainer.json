@@ -15,6 +15,6 @@
       ]
     }
   },
-  "postCreateCommand": "echo 'Java development environment with Claude Code ready'",
+  "postCreateCommand": "git config core.hooksPath .git-hooks && echo 'Java development environment with Claude Code ready - Git hooks configured'",
   "remoteUser": "ubuntu"
 }

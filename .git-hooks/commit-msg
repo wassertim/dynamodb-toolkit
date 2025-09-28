@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Husky commit-msg hook to prevent Claude attribution in commit messages
+# Git commit-msg hook to prevent Claude attribution in commit messages
 # This is a shell script version that works without Node.js
 
 if [ -z "$1" ]; then
