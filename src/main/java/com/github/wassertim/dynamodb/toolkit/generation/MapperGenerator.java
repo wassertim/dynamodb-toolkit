@@ -108,7 +108,7 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
         String className = typeInfo.getClassName();
         String paramName = typeExtractor.getParameterName(className);
         ClassName attributeValue = ClassName.get(AttributeValue.class);
-        ClassName domainClass = ClassName.bestGuess(className);
+        ClassName domainClass = ClassName.bestGuess(typeInfo.getFullyQualifiedClassName());
 
         MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("toDynamoDbAttributeValue")
                 .addModifiers(Modifier.PUBLIC)
@@ -123,16 +123,13 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
         methodBuilder.beginControlFlow("if ($L == null)", paramName)
                 .addStatement("return null")
                 .endControlFlow()
-                .addStatement("")
                 .addStatement("$T<$T, $T> attributes = new $T<>()",
-                    Map.class, String.class, AttributeValue.class, HashMap.class)
-                .addStatement("");
+                    Map.class, String.class, AttributeValue.class, HashMap.class);
 
         // Generate field mappings
         for (FieldInfo field : typeInfo.getFields()) {
             CodeBlock mappingCode = fieldMappingCodeGenerator.generateToAttributeValueMapping(field, paramName);
             methodBuilder.addCode(mappingCode);
-            methodBuilder.addStatement("");
         }
 
         methodBuilder.addStatement("return $T.builder().m(attributes).build()", attributeValue);
@@ -143,7 +140,7 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
     private MethodSpec buildFromAttributeValueMethod(TypeInfo typeInfo) {
         String className = typeInfo.getClassName();
         ClassName attributeValue = ClassName.get(AttributeValue.class);
-        ClassName domainClass = ClassName.bestGuess(className);
+        ClassName domainClass = ClassName.bestGuess(typeInfo.getFullyQualifiedClassName());
 
         MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("fromDynamoDbAttributeValue")
                 .addModifiers(Modifier.PUBLIC)
@@ -158,11 +155,9 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
         methodBuilder.beginControlFlow("if (attributeValue == null || attributeValue.m() == null)")
                 .addStatement("return null")
                 .endControlFlow()
-                .addStatement("")
                 .addStatement("$T<$T, $T> item = attributeValue.m()",
                     Map.class, String.class, AttributeValue.class)
-                .addStatement("var builder = $T.builder()", domainClass)
-                .addStatement("");
+                .addStatement("var builder = $T.builder()", domainClass);
 
         // Generate field mappings
         for (FieldInfo field : typeInfo.getFields()) {
@@ -178,7 +173,7 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
     private void addConvenienceMethods(TypeSpec.Builder classBuilder, TypeInfo typeInfo) {
         String className = typeInfo.getClassName();
         ClassName attributeValue = ClassName.get(AttributeValue.class);
-        ClassName domainClass = ClassName.bestGuess(className);
+        ClassName domainClass = ClassName.bestGuess(typeInfo.getFullyQualifiedClassName());
 
         // fromDynamoDbItem method
         MethodSpec fromDynamoDbItem = MethodSpec.methodBuilder("fromDynamoDbItem")
@@ -219,11 +214,12 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                 .beginControlFlow("if (items == null || items.isEmpty())")
                 .addStatement("return new $T<>()", ClassName.get("java.util", "ArrayList"))
                 .endControlFlow()
-                .addStatement("return items.stream()")
-                .addStatement("    .map(item -> $T.builder().m(item).build())", attributeValue)
-                .addStatement("    .map(this::fromDynamoDbAttributeValue)")
-                .addStatement("    .filter($T::nonNull)", ClassName.get(Objects.class))
-                .addStatement("    .collect($T.toList())", ClassName.get(Collectors.class))
+                .addStatement("return items.stream()$>\n" +
+                    ".map(item -> $T.builder().m(item).build())$>\n" +
+                    ".map(this::fromDynamoDbAttributeValue)$>\n" +
+                    ".filter($T::nonNull)$>\n" +
+                    ".collect($T.toList())$<$<$<$<",
+                    attributeValue, ClassName.get(Objects.class), ClassName.get(Collectors.class))
                 .build();
 
         // toDynamoDbItem method
@@ -264,12 +260,13 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                 .beginControlFlow("if (objects == null || objects.isEmpty())")
                 .addStatement("return new $T<>()", ClassName.get("java.util", "ArrayList"))
                 .endControlFlow()
-                .addStatement("return objects.stream()")
-                .addStatement("    .map(this::toDynamoDbAttributeValue)")
-                .addStatement("    .filter($T::nonNull)", ClassName.get(Objects.class))
-                .addStatement("    .map(av -> av.m())")
-                .addStatement("    .filter(map -> map != null && !map.isEmpty())")
-                .addStatement("    .collect($T.toList())", ClassName.get(Collectors.class))
+                .addStatement("return objects.stream()$>\n" +
+                    ".map(this::toDynamoDbAttributeValue)$>\n" +
+                    ".filter($T::nonNull)$>\n" +
+                    ".map(av -> av.m())$>\n" +
+                    ".filter(map -> map != null && !map.isEmpty())$>\n" +
+                    ".collect($T.toList())$<$<$<$<$<",
+                    ClassName.get(Objects.class), ClassName.get(Collectors.class))
                 .build();
 
         classBuilder.addMethod(fromDynamoDbItem);

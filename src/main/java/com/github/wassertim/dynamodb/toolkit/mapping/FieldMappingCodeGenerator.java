@@ -256,12 +256,12 @@ public class FieldMappingCodeGenerator {
 
     private CodeBlock generateEnumDeserialization(FieldInfo field, String fieldName) {
         ClassName mappingUtils = ClassName.get("com.github.wassertim.dynamodb.runtime", "MappingUtils");
-        String enumType = utils.extractSimpleTypeName(field.getFieldTypeName());
+        ClassName enumType = ClassName.bestGuess(field.getFieldTypeName());
 
         return CodeBlock.builder()
                 .addStatement("$T value = $T.getStringSafely($LAttr)", String.class, mappingUtils, fieldName)
                 .beginControlFlow("if (value != null)")
-                .add(utils.createEnumParseBlock(enumType, "value", fieldName))
+                .add(utils.createEnumParseBlock(enumType.simpleName(), "value", fieldName))
                 .endControlFlow()
                 .build();
     }
@@ -307,10 +307,10 @@ public class FieldMappingCodeGenerator {
 
     private CodeBlock generateComplexObjectDeserialization(FieldInfo field, String fieldName) {
         String mapperField = utils.getFieldNameForDependency(field.getMapperDependency());
-        String simpleType = utils.extractSimpleTypeName(field.getFieldTypeName());
+        ClassName complexType = ClassName.bestGuess(field.getFieldTypeName());
 
         return CodeBlock.builder()
-                .addStatement("$L value = $L.fromDynamoDbAttributeValue($LAttr)", simpleType, mapperField, fieldName)
+                .addStatement("$T value = $L.fromDynamoDbAttributeValue($LAttr)", complexType, mapperField, fieldName)
                 .beginControlFlow("if (value != null)")
                 .addStatement("builder.$L(value)", fieldName)
                 .endControlFlow()
