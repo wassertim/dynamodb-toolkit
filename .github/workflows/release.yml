@@ -56,7 +56,7 @@ jobs:
 
     - name: Prepare release
       run: |
-        # Determine next version based on input
+        # Determine release version based on input
         CURRENT_VERSION=$(mvn help:evaluate -Dexpression=dynamodb-toolkit.version -q -DforceStdout)
         BASE_VERSION=$(echo $CURRENT_VERSION | sed 's/-SNAPSHOT//')
 
@@ -68,7 +68,8 @@ jobs:
             NEW_VERSION=$(echo $BASE_VERSION | awk -F. '{print $1"."($2+1)".0"}')
             ;;
           "patch")
-            NEW_VERSION=$(echo $BASE_VERSION | awk -F. '{print $1"."$2"."($3+1)}')
+            # For patch releases, use the current SNAPSHOT version (just remove -SNAPSHOT)
+            NEW_VERSION=$BASE_VERSION
             ;;
         esac
 
@@ -94,8 +95,18 @@ jobs:
 
     - name: Prepare next development version
       run: |
-        # Calculate next development version
-        NEXT_DEV_VERSION=$(echo $NEW_VERSION | awk -F. '{print $1"."$2"."($3+1)"-SNAPSHOT"}')
+        # Calculate next development version based on the version type
+        case "${{ github.event.inputs.version_type }}" in
+          "major")
+            NEXT_DEV_VERSION=$(echo $NEW_VERSION | awk -F. '{print $1".1.0-SNAPSHOT"}')
+            ;;
+          "minor")
+            NEXT_DEV_VERSION=$(echo $NEW_VERSION | awk -F. '{print $1"."$2".1-SNAPSHOT"}')
+            ;;
+          "patch")
+            NEXT_DEV_VERSION=$(echo $NEW_VERSION | awk -F. '{print $1"."$2"."($3+1)"-SNAPSHOT"}')
+            ;;
+        esac
 
         # Update to next development version
         sed -i "s/<dynamodb-toolkit.version>.*<\/dynamodb-toolkit.version>/<dynamodb-toolkit.version>$NEXT_DEV_VERSION<\/dynamodb-toolkit.version>/" pom.xml
