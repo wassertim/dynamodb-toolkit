@@ -1,30 +1,25 @@
 package com.github.wassertim.dynamodb.toolkit.generation;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.time.Instant;
-import java.util.List;
+import com.palantir.javapoet.*;
+import com.github.wassertim.dynamodb.toolkit.analysis.TypeInfo;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
-import javax.tools.Diagnostic;
-import javax.tools.JavaFileObject;
-
-import com.github.wassertim.dynamodb.toolkit.analysis.TypeInfo;
+import javax.lang.model.element.Modifier;
+import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
+ * JavaPoet-based TableNameResolver class generator.
  * Generates a complete TableNameResolver class that automatically includes
  * all @Table annotated classes in switch cases. This eliminates the need
  * for manual maintenance of hardcoded switch statements.
  */
-public class TableNameResolverGenerator {
-
-    private final Filer filer;
-    private final Messager messager;
+public class TableNameResolverGenerator extends AbstractJavaPoetGenerator {
 
     public TableNameResolverGenerator(Filer filer, Messager messager) {
-        this.filer = filer;
-        this.messager = messager;
+        super(filer, messager);
     }
 
     /**
@@ -32,101 +27,81 @@ public class TableNameResolverGenerator {
      */
     public void generateTableNameResolver(List<TypeInfo> allTableTypes) throws IOException {
         if (allTableTypes.isEmpty()) {
-            messager.printMessage(Diagnostic.Kind.WARNING,
+            messager.printMessage(javax.tools.Diagnostic.Kind.WARNING,
                     "No @Table annotated types found, skipping TableNameResolver generation");
             return;
         }
 
         String packageName = "com.github.wassertim.infrastructure";
+        TypeSpec tableNameResolverClass = buildTableNameResolverClass(allTableTypes);
+        writeJavaFile(packageName, tableNameResolverClass);
+
+        messager.printMessage(javax.tools.Diagnostic.Kind.NOTE,
+                "Generated TableNameResolver with " + allTableTypes.size() + " table mappings");
+    }
+
+    private TypeSpec buildTableNameResolverClass(List<TypeInfo> allTableTypes) {
         String className = "TableNameResolver";
-        String fullyQualifiedName = packageName + "." + className;
+        int tableCount = allTableTypes.size();
 
-        JavaFileObject sourceFile = filer.createSourceFile(fullyQualifiedName);
+        TypeSpec.Builder classBuilder = TypeSpec.classBuilder(className)
+                .addModifiers(Modifier.PUBLIC)
+                .addJavadoc(createGeneratedJavadoc(
+                        "Generated utility class for resolving base DynamoDB table names from domain entities.\\n" +
+                        "Returns only the base table name without any environment-specific prefixes.\\n" +
+                        "Automatically includes all @Table annotated classes in switch cases.\\n" +
+                        "Covers " + tableCount + " table" + (tableCount == 1 ? "" : "s") + ".\\n" +
+                        "DO NOT EDIT - This file is generated automatically"
+                ));
 
-        try (PrintWriter writer = new PrintWriter(sourceFile.openWriter())) {
-            generateTableNameResolverClass(writer, allTableTypes, packageName, className);
-        }
+        // Add resolveTableName method
+        MethodSpec resolveTableNameMethod = buildResolveTableNameMethod(allTableTypes);
+        classBuilder.addMethod(resolveTableNameMethod);
 
-        messager.printMessage(Diagnostic.Kind.NOTE,
-                "Generated TableNameResolver with " + allTableTypes.size() + " table mappings: " + fullyQualifiedName);
+        return classBuilder.build();
     }
 
-    private void generateTableNameResolverClass(PrintWriter writer, List<TypeInfo> allTableTypes,
-                                                String packageName, String className) {
-        // Package declaration
-        writer.println("package " + packageName + ";");
-        writer.println();
+    private MethodSpec buildResolveTableNameMethod(List<TypeInfo> allTableTypes) {
+        MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("resolveTableName")
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(String.class)
+                .addParameter(ParameterizedTypeName.get(ClassName.get(Class.class), WildcardTypeName.subtypeOf(Object.class)), "entityClass")
+                .addJavadoc("Resolves the base table name from a @Table annotated domain entity class.\\n")
+                .addJavadoc("Returns only the base table name without any environment-specific prefixes.\\n")
+                .addJavadoc("Automatically generated to include all discovered @Table classes.\\n")
+                .addJavadoc("\\n")
+                .addJavadoc("@param entityClass the @Table annotated domain entity class\\n")
+                .addJavadoc("@return the base table name without any prefix\\n")
+                .addJavadoc("@throws IllegalArgumentException if the class is not a known @Table entity\\n");
 
-        // Imports
-        generateImports(writer);
-        writer.println();
-
-        // Class declaration with documentation
-        generateClassDeclaration(writer, className, allTableTypes.size());
-
-        // Generate resolveTableName method
-        generateResolveTableNameMethod(writer, allTableTypes);
-
-        // Close class
-        writer.println("}");
-    }
-
-    private void generateImports(PrintWriter writer) {
-        // No imports needed for pure table name resolution
-    }
-
-    private void generateClassDeclaration(PrintWriter writer, String className, int tableCount) {
-        writer.println("/**");
-        writer.println(" * Generated utility class for resolving base DynamoDB table names from domain entities.");
-        writer.println(" * Returns only the base table name without any environment-specific prefixes.");
-        writer.println(" * Automatically includes all @Table annotated classes in switch cases.");
-        writer.println(" * Generated at: " + Instant.now());
-        writer.println(" * Covers " + tableCount + " table" + (tableCount == 1 ? "" : "s") + ".");
-        writer.println(" * DO NOT EDIT - This file is generated automatically");
-        writer.println(" */");
-        writer.println("public class " + className + " {");
-        writer.println();
-    }
-
-    private void generateResolveTableNameMethod(PrintWriter writer, List<TypeInfo> allTableTypes) {
-        writer.println("    /**");
-        writer.println("     * Resolves the base table name from a @Table annotated domain entity class.");
-        writer.println("     * Returns only the base table name without any environment-specific prefixes.");
-        writer.println("     * Automatically generated to include all discovered @Table classes.");
-        writer.println("     *");
-        writer.println("     * @param entityClass the @Table annotated domain entity class");
-        writer.println("     * @return the base table name without any prefix");
-        writer.println("     * @throws IllegalArgumentException if the class is not a known @Table entity");
-        writer.println("     */");
-        writer.println("    public static String resolveTableName(Class<?> entityClass) {");
-        writer.println("        return switch (entityClass.getName()) {");
+        // Build switch statement
+        CodeBlock.Builder switchBuilder = CodeBlock.builder()
+                .add("return switch (entityClass.getName()) {\\n");
 
         // Generate switch cases for all table types
         for (TypeInfo typeInfo : allTableTypes) {
             String fullyQualifiedClassName = typeInfo.getFullyQualifiedClassName();
-            String tableName = extractTableName(typeInfo);
-            writer.println("            case \"" + fullyQualifiedClassName + "\" -> \"" + tableName + "\";");
+            String tableName = typeInfo.getTableName();
+            switchBuilder.add("    case $S -> $S;\\n", fullyQualifiedClassName, tableName);
         }
 
-        writer.println("            default -> throw new IllegalArgumentException(");
-        writer.println("                \"Unknown @Table annotated class: \" + entityClass.getName() +");
-        writer.println("                \". Known tables: " + generateKnownTablesList(allTableTypes) + "\");");
-        writer.println("        };");
-        writer.println("    }");
-        writer.println();
-    }
-
-    /**
-     * Extracts the table name from the TypeInfo which contains the @Table annotation value.
-     */
-    private String extractTableName(TypeInfo typeInfo) {
-        return typeInfo.getTableName();
-    }
-
-    private String generateKnownTablesList(List<TypeInfo> allTableTypes) {
-        return allTableTypes.stream()
+        // Generate default case
+        String knownTablesList = allTableTypes.stream()
                 .map(TypeInfo::getFullyQualifiedClassName)
-                .reduce((a, b) -> a + ", " + b)
-                .orElse("none");
+                .collect(Collectors.joining(", "));
+
+        switchBuilder.add("    default -> throw new $T(\\n", IllegalArgumentException.class)
+                .add("        $S +\\n", "Unknown @Table annotated class: ")
+                .add("        entityClass.getName() +\\n")
+                .add("        $S);\\n", ". Known tables: " + knownTablesList)
+                .add("};\\n");
+
+        methodBuilder.addCode(switchBuilder.build());
+        return methodBuilder.build();
+    }
+
+    @Override
+    protected String getTargetPackage(TypeInfo typeInfo) {
+        return "com.github.wassertim.infrastructure";
     }
 }
