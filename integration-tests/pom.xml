@@ -4,7 +4,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.github.wassertim</groupId>
+    <groupId>com.github.wassertim</groupId>
     <artifactId>dynamodb-toolkit-integration-tests</artifactId>
     <version>${dynamodb-toolkit.version}</version>
 
@@ -31,7 +31,7 @@
     <dependencies>
         <!-- Main library dependency -->
         <dependency>
-            <groupId>io.github.wassertim</groupId>
+            <groupId>com.github.wassertim</groupId>
             <artifactId>dynamodb-toolkit</artifactId>
             <version>${dynamodb-toolkit.version}</version>
         </dependency>
@@ -86,7 +86,7 @@
                     <!-- Re-enable DynamoDB Toolkit annotation processor -->
                     <annotationProcessorPaths>
                         <path>
-                            <groupId>io.github.wassertim</groupId>
+                            <groupId>com.github.wassertim</groupId>
                             <artifactId>dynamodb-toolkit</artifactId>
                             <version>${dynamodb-toolkit.version}</version>
                         </path>
