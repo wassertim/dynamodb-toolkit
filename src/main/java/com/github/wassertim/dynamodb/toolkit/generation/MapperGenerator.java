@@ -114,10 +114,10 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                 .addModifiers(Modifier.PUBLIC)
                 .returns(attributeValue)
                 .addParameter(domainClass, paramName)
-                .addJavadoc("Converts a $L object to DynamoDB AttributeValue format.\\n", className)
-                .addJavadoc("\\n")
-                .addJavadoc("@param $L The $L object to convert\\n", paramName, className)
-                .addJavadoc("@return AttributeValue in Map format, or null if input is null\\n");
+                .addJavadoc("Converts a $L object to DynamoDB AttributeValue format.\n", className)
+                .addJavadoc("\n")
+                .addJavadoc("@param $L The $L object to convert\n", paramName, className)
+                .addJavadoc("@return AttributeValue in Map format, or null if input is null\n");
 
         // Null check
         methodBuilder.beginControlFlow("if ($L == null)", paramName)
@@ -149,10 +149,10 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                 .addModifiers(Modifier.PUBLIC)
                 .returns(domainClass)
                 .addParameter(attributeValue, "attributeValue")
-                .addJavadoc("Converts a DynamoDB AttributeValue to a $L object.\\n", className)
-                .addJavadoc("\\n")
-                .addJavadoc("@param attributeValue The DynamoDB AttributeValue to convert (must be in Map format)\\n")
-                .addJavadoc("@return $L object, or null if input is null or invalid\\n", className);
+                .addJavadoc("Converts a DynamoDB AttributeValue to a $L object.\n", className)
+                .addJavadoc("\n")
+                .addJavadoc("@param attributeValue The DynamoDB AttributeValue to convert (must be in Map format)\n")
+                .addJavadoc("@return $L object, or null if input is null or invalid\n", className);
 
         // Null check
         methodBuilder.beginControlFlow("if (attributeValue == null || attributeValue.m() == null)")
@@ -188,11 +188,11 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                     ClassName.get(Map.class),
                     ClassName.get(String.class),
                     attributeValue), "item")
-                .addJavadoc("Convenience method to convert a single DynamoDB item to a domain object.\\n")
-                .addJavadoc("Handles the common pattern of mapping GetItemResponse.item() to domain objects.\\n")
-                .addJavadoc("\\n")
-                .addJavadoc("@param item DynamoDB item from GetItemResponse.item()\\n")
-                .addJavadoc("@return Optional of $L object, empty if item is null or conversion fails\\n", className)
+                .addJavadoc("Convenience method to convert a single DynamoDB item to a domain object.\n")
+                .addJavadoc("Handles the common pattern of mapping GetItemResponse.item() to domain objects.\n")
+                .addJavadoc("\n")
+                .addJavadoc("@param item DynamoDB item from GetItemResponse.item()\n")
+                .addJavadoc("@return Optional of $L object, empty if item is null or conversion fails\n", className)
                 .beginControlFlow("if (item == null || item.isEmpty())")
                 .addStatement("return $T.empty()", ClassName.get("java.util", "Optional"))
                 .endControlFlow()
@@ -211,11 +211,11 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                         ClassName.get(Map.class),
                         ClassName.get(String.class),
                         attributeValue)), "items")
-                .addJavadoc("Convenience method to convert a list of DynamoDB items to domain objects.\\n")
-                .addJavadoc("Handles the common pattern of mapping QueryResponse.items() to domain objects.\\n")
-                .addJavadoc("\\n")
-                .addJavadoc("@param items List of DynamoDB items from QueryResponse.items() or ScanResponse.items()\\n")
-                .addJavadoc("@return List of $L objects, filtering out any null results\\n", className)
+                .addJavadoc("Convenience method to convert a list of DynamoDB items to domain objects.\n")
+                .addJavadoc("Handles the common pattern of mapping QueryResponse.items() to domain objects.\n")
+                .addJavadoc("\n")
+                .addJavadoc("@param items List of DynamoDB items from QueryResponse.items() or ScanResponse.items()\n")
+                .addJavadoc("@return List of $L objects, filtering out any null results\n", className)
                 .beginControlFlow("if (items == null || items.isEmpty())")
                 .addStatement("return new $T<>()", ClassName.get("java.util", "ArrayList"))
                 .endControlFlow()
@@ -234,11 +234,11 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                     ClassName.get(String.class),
                     attributeValue))
                 .addParameter(domainClass, "object")
-                .addJavadoc("Convenience method to convert a single domain object to a DynamoDB item.\\n")
-                .addJavadoc("Useful for PutItem operations.\\n")
-                .addJavadoc("\\n")
-                .addJavadoc("@param object The $L object to convert\\n", className)
-                .addJavadoc("@return DynamoDB item (Map<String, AttributeValue>), or null if input is null or conversion fails\\n")
+                .addJavadoc("Convenience method to convert a single domain object to a DynamoDB item.\n")
+                .addJavadoc("Useful for PutItem operations.\n")
+                .addJavadoc("\n")
+                .addJavadoc("@param object The $L object to convert\n", className)
+                .addJavadoc("@return DynamoDB item (Map<String, AttributeValue>), or null if input is null or conversion fails\n")
                 .beginControlFlow("if (object == null)")
                 .addStatement("return null")
                 .endControlFlow()
@@ -256,11 +256,11 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                         ClassName.get(String.class),
                         attributeValue)))
                 .addParameter(ParameterizedTypeName.get(ClassName.get(List.class), domainClass), "objects")
-                .addJavadoc("Convenience method to convert a list of domain objects to DynamoDB items.\\n")
-                .addJavadoc("Useful for batch operations like batchWriteItem.\\n")
-                .addJavadoc("\\n")
-                .addJavadoc("@param objects List of $L objects to convert\\n", className)
-                .addJavadoc("@return List of DynamoDB items (Map<String, AttributeValue>), filtering out any null results\\n")
+                .addJavadoc("Convenience method to convert a list of domain objects to DynamoDB items.\n")
+                .addJavadoc("Useful for batch operations like batchWriteItem.\n")
+                .addJavadoc("\n")
+                .addJavadoc("@param objects List of $L objects to convert\n", className)
+                .addJavadoc("@return List of DynamoDB items (Map<String, AttributeValue>), filtering out any null results\n")
                 .beginControlFlow("if (objects == null || objects.isEmpty())")
                 .addStatement("return new $T<>()", ClassName.get("java.util", "ArrayList"))
                 .endControlFlow()
