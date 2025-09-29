@@ -37,6 +37,25 @@ public class TypeExtractor {
     }
 
     /**
+     * Extracts the qualified element type name from a List field for JavaPoet imports.
+     */
+    public String extractListElementQualifiedType(FieldInfo field) {
+        if (field.getFieldType() instanceof DeclaredType declaredType) {
+            var typeArguments = declaredType.getTypeArguments();
+            if (!typeArguments.isEmpty()) {
+                var elementType = typeArguments.get(0);
+                if (elementType instanceof DeclaredType elementDeclaredType) {
+                    var element = elementDeclaredType.asElement();
+                    if (element instanceof TypeElement typeElement) {
+                        return typeElement.getQualifiedName().toString();
+                    }
+                }
+            }
+        }
+        return "java.lang.Object";
+    }
+
+    /**
      * Extracts the fully qualified element type from a List field for imports.
      */
     public String extractFullyQualifiedListElementType(FieldInfo field) {

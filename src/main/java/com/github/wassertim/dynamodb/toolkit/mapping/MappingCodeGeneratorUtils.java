@@ -131,12 +131,19 @@ public class MappingCodeGeneratorUtils {
     }
 
     /**
+     * Extracts the qualified element type from a List field for JavaPoet imports.
+     */
+    public String extractListElementQualifiedType(FieldInfo field) {
+        return typeExtractor.extractListElementQualifiedType(field);
+    }
+
+    /**
      * Creates a try-catch block for enum parsing.
      */
-    public CodeBlock createEnumParseBlock(String enumType, String valueVar, String fieldName) {
+    public CodeBlock createEnumParseBlock(com.palantir.javapoet.ClassName enumType, String valueVar, String fieldName) {
         return CodeBlock.builder()
                 .beginControlFlow("try")
-                .addStatement("builder.$L($L.valueOf($L))", fieldName, enumType, valueVar)
+                .addStatement("builder.$L($T.valueOf($L))", fieldName, enumType, valueVar)
                 .nextControlFlow("catch ($T e)", IllegalArgumentException.class)
                 .addStatement("// Skip invalid enum value")
                 .endControlFlow()

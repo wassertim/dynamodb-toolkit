@@ -50,7 +50,9 @@ public class FieldMappingCodeGenerator {
         CodeBlock putStatement = CodeBlock.of("$L", utils.createAttributePut(fieldName, utils.createStringAttribute(getterCall)));
 
         if (isPrimitive) {
-            return putStatement;
+            return CodeBlock.builder()
+                    .addStatement("$L", putStatement)
+                    .build();
         } else {
             return CodeBlock.builder()
                     .beginControlFlow("if ($L)", utils.createNullCheck(getterCall))
@@ -64,7 +66,9 @@ public class FieldMappingCodeGenerator {
         CodeBlock putStatement = CodeBlock.of("$L", utils.createAttributePut(fieldName, utils.createNumberAttribute(getterCall)));
 
         if (isPrimitive) {
-            return putStatement;
+            return CodeBlock.builder()
+                    .addStatement("$L", putStatement)
+                    .build();
         } else {
             return CodeBlock.builder()
                     .beginControlFlow("if ($L)", utils.createNullCheck(getterCall))
@@ -78,7 +82,9 @@ public class FieldMappingCodeGenerator {
         CodeBlock putStatement = CodeBlock.of("$L", utils.createAttributePut(fieldName, utils.createBooleanAttribute(getterCall)));
 
         if (isPrimitive) {
-            return putStatement;
+            return CodeBlock.builder()
+                    .addStatement("$L", putStatement)
+                    .build();
         } else {
             return CodeBlock.builder()
                     .beginControlFlow("if ($L)", utils.createNullCheck(getterCall))
@@ -119,11 +125,11 @@ public class FieldMappingCodeGenerator {
 
         return CodeBlock.builder()
                 .beginControlFlow("if ($L)", utils.createNullAndEmptyCheck(getterCall))
-                .addStatement("$T<$T> nestedList = $L.stream()", list, attributeValue, getterCall)
-                .addStatement("    .map(innerList -> innerList.stream()")
-                .addStatement("        .map(num -> $T.builder().n($T.valueOf(num)).build())", attributeValue, String.class)
-                .addStatement("        .collect($T.toList()))", collectors)
-                .addStatement("    .map(numList -> $T.builder().l(numList).build())", attributeValue)
+                .add("$T<$T> nestedList = $L.stream()\n", list, attributeValue, getterCall)
+                .add("    .map(innerList -> innerList.stream()\n")
+                .add("        .map(num -> $T.builder().n($T.valueOf(num)).build())\n", attributeValue, String.class)
+                .add("        .collect($T.toList()))\n", collectors)
+                .add("    .map(numList -> $T.builder().l(numList).build())\n", attributeValue)
                 .addStatement("    .collect($T.toList())", collectors)
                 .beginControlFlow("if (!nestedList.isEmpty())")
                 .addStatement("$L", utils.createAttributePut(fieldName, utils.createListAttribute("nestedList")))
@@ -155,9 +161,9 @@ public class FieldMappingCodeGenerator {
 
         return CodeBlock.builder()
                 .beginControlFlow("if ($L)", utils.createNullAndEmptyCheck(getterCall))
-                .addStatement("$T<$T> $LList = $L.stream()", list, attributeValue, fieldName, getterCall)
-                .addStatement("    .map($L::toDynamoDbAttributeValue)", listMapperField)
-                .addStatement("    .filter($T::nonNull)", objects)
+                .add("$T<$T> $LList = $L.stream()\n", list, attributeValue, fieldName, getterCall)
+                .add("    .map($L::toDynamoDbAttributeValue)\n", listMapperField)
+                .add("    .filter($T::nonNull)\n", objects)
                 .addStatement("    .collect($T.toList())", collectors)
                 .beginControlFlow("if (!$LList.isEmpty())", fieldName)
                 .addStatement("$L", utils.createAttributePut(fieldName, utils.createListAttribute(fieldName + "List")))
@@ -261,7 +267,7 @@ public class FieldMappingCodeGenerator {
         return CodeBlock.builder()
                 .addStatement("$T value = $T.getStringSafely($LAttr)", String.class, mappingUtils, fieldName)
                 .beginControlFlow("if (value != null)")
-                .add(utils.createEnumParseBlock(enumType.simpleName(), "value", fieldName))
+                .add(utils.createEnumParseBlock(enumType, "value", fieldName))
                 .endControlFlow()
                 .build();
     }
@@ -285,18 +291,18 @@ public class FieldMappingCodeGenerator {
         return CodeBlock.builder()
                 .addStatement("$T<$T> nestedListValue = $T.getListSafely($LAttr)", list, attributeValue, mappingUtils, fieldName)
                 .beginControlFlow("if (nestedListValue != null)")
-                .addStatement("$T<$T<$T>> coordinates = nestedListValue.stream()", list, list, Double.class)
-                .addStatement("    .map(av -> {")
-                .addStatement("        $T<$T> innerList = $T.getListSafely(av)", list, attributeValue, mappingUtils)
-                .addStatement("        if (innerList != null) {")
-                .addStatement("            return innerList.stream()")
-                .addStatement("                .map(numAv -> $T.getDoubleSafely(numAv))", mappingUtils)
-                .addStatement("                .filter($T::nonNull)", objects)
-                .addStatement("                .collect($T.toList())", collectors)
-                .addStatement("        }")
-                .addStatement("        return new $T<$T>()", arrayList, Double.class)
-                .addStatement("    })")
-                .addStatement("    .filter(list -> !list.isEmpty())")
+                .add("$T<$T<$T>> coordinates = nestedListValue.stream()\n", list, list, Double.class)
+                .add("    .map(av -> {\n")
+                .add("        $T<$T> innerList = $T.getListSafely(av);\n", list, attributeValue, mappingUtils)
+                .add("        if (innerList != null) {\n")
+                .add("            return innerList.stream()\n")
+                .add("                .map(numAv -> $T.getDoubleSafely(numAv))\n", mappingUtils)
+                .add("                .filter($T::nonNull)\n", objects)
+                .add("                .collect($T.toList());\n", collectors)
+                .add("        }\n")
+                .add("        return new $T<$T>();\n", arrayList, Double.class)
+                .add("    })\n")
+                .add("    .filter(list -> !list.isEmpty())\n")
                 .addStatement("    .collect($T.toList())", collectors)
                 .beginControlFlow("if (!coordinates.isEmpty())")
                 .addStatement("builder.$L(coordinates)", fieldName)
@@ -320,7 +326,8 @@ public class FieldMappingCodeGenerator {
     private CodeBlock generateComplexListDeserialization(FieldInfo field, String fieldName) {
         ClassName mappingUtils = ClassName.get("com.github.wassertim.dynamodb.runtime", "MappingUtils");
         String listMapperField = utils.getFieldNameForDependency(field.getMapperDependency());
-        String elementType = utils.extractListElementType(field);
+        String elementTypeQualified = utils.extractListElementQualifiedType(field);
+        ClassName elementType = ClassName.bestGuess(elementTypeQualified);
         ClassName attributeValue = ClassName.get(AttributeValue.class);
         ClassName list = ClassName.get(List.class);
         ClassName objects = ClassName.get(Objects.class);
@@ -329,9 +336,9 @@ public class FieldMappingCodeGenerator {
         return CodeBlock.builder()
                 .addStatement("$T<$T> listValue = $T.getListSafely($LAttr)", list, attributeValue, mappingUtils, fieldName)
                 .beginControlFlow("if (listValue != null)")
-                .addStatement("$T<$L> $LList = listValue.stream()", list, elementType, fieldName)
-                .addStatement("    .map($L::fromDynamoDbAttributeValue)", listMapperField)
-                .addStatement("    .filter($T::nonNull)", objects)
+                .add("$T<$T> $LList = listValue.stream()\n", list, elementType, fieldName)
+                .add("    .map($L::fromDynamoDbAttributeValue)\n", listMapperField)
+                .add("    .filter($T::nonNull)\n", objects)
                 .addStatement("    .collect($T.toList())", collectors)
                 .beginControlFlow("if (!$LList.isEmpty())", fieldName)
                 .addStatement("builder.$L($LList)", fieldName, fieldName)
