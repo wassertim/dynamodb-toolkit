@@ -1,276 +1,349 @@
 package com.github.wassertim.dynamodb.toolkit.mapping;
 
-import java.io.PrintWriter;
-
+import com.palantir.javapoet.CodeBlock;
+import com.palantir.javapoet.ClassName;
 import com.github.wassertim.dynamodb.toolkit.analysis.FieldInfo;
 import com.github.wassertim.dynamodb.toolkit.analysis.TypeExtractor;
 
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
+
 /**
- * Generates field mapping code for converting between domain objects and DynamoDB AttributeValue format.
- * Handles the complex switch statements for different field mapping strategies.
+ * JavaPoet-based field mapping code generator for converting between domain objects and DynamoDB AttributeValue format.
+ * Handles the complex switch statements for different field mapping strategies using type-safe code generation.
  */
 public class FieldMappingCodeGenerator {
 
-    private final TypeExtractor typeExtractor;
+    private final MappingCodeGeneratorUtils utils;
 
     public FieldMappingCodeGenerator(TypeExtractor typeExtractor) {
-        this.typeExtractor = typeExtractor;
+        this.utils = new MappingCodeGeneratorUtils(typeExtractor);
     }
 
     /**
      * Generates code to convert a domain object field to DynamoDB AttributeValue.
      */
-    public void generateToAttributeValueMapping(PrintWriter writer, FieldInfo field, String objectName) {
+    public CodeBlock generateToAttributeValueMapping(FieldInfo field, String objectName) {
         String fieldName = field.getFieldName();
         boolean isPrimitive = field.isPrimitive();
-        String getterCall = objectName + ".get" +
-            Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1) + "()";
+        String getterCall = utils.createGetterCall(objectName, fieldName);
 
-        switch (field.getMappingStrategy()) {
-            case STRING:
-                if (isPrimitive) {
-                    writer.println("        attributes.put(\"" + fieldName +
-                        "\", MappingUtils.createStringAttribute(" + getterCall + "));");
-                } else {
-                    writer.println("        if (" + getterCall + " != null) {");
-                    writer.println("            attributes.put(\"" + fieldName +
-                        "\", MappingUtils.createStringAttribute(" + getterCall + "));");
-                    writer.println("        }");
-                }
-                break;
+        return switch (field.getMappingStrategy()) {
+            case STRING -> generateStringMapping(fieldName, getterCall, isPrimitive);
+            case NUMBER -> generateNumberMapping(fieldName, getterCall, isPrimitive);
+            case BOOLEAN -> generateBooleanMapping(fieldName, getterCall, isPrimitive);
+            case INSTANT -> generateInstantMapping(fieldName, getterCall);
+            case ENUM -> generateEnumMapping(fieldName, getterCall);
+            case STRING_LIST -> generateStringListMapping(fieldName, getterCall);
+            case NESTED_NUMBER_LIST -> generateNestedNumberListMapping(fieldName, getterCall);
+            case COMPLEX_OBJECT -> generateComplexObjectMapping(field, fieldName, getterCall);
+            case COMPLEX_LIST -> generateComplexListMapping(field, fieldName, getterCall);
+            case MAP -> generateMapMapping(fieldName, getterCall);
+            default -> CodeBlock.of("// Unsupported mapping strategy: $L\n", field.getMappingStrategy());
+        };
+    }
 
-            case NUMBER:
-                if (isPrimitive) {
-                    writer.println("        attributes.put(\"" + fieldName +
-                        "\", MappingUtils.createNumberAttribute(" + getterCall + "));");
-                } else {
-                    writer.println("        if (" + getterCall + " != null) {");
-                    writer.println("            attributes.put(\"" + fieldName +
-                        "\", MappingUtils.createNumberAttribute(" + getterCall + "));");
-                    writer.println("        }");
-                }
-                break;
+    private CodeBlock generateStringMapping(String fieldName, String getterCall, boolean isPrimitive) {
+        CodeBlock putStatement = CodeBlock.of("$L", utils.createAttributePut(fieldName, utils.createStringAttribute(getterCall)));
 
-            case BOOLEAN:
-                if (isPrimitive) {
-                    writer.println("        attributes.put(\"" + fieldName +
-                        "\", AttributeValue.builder().bool(" + getterCall + ").build());");
-                } else {
-                    writer.println("        if (" + getterCall + " != null) {");
-                    writer.println("            attributes.put(\"" + fieldName +
-                        "\", AttributeValue.builder().bool(" + getterCall + ").build());");
-                    writer.println("        }");
-                }
-                break;
-
-            case INSTANT:
-                writer.println("        if (" + getterCall + " != null) {");
-                writer.println("            attributes.put(\"" + fieldName +
-                    "\", MappingUtils.createStringAttribute(" + getterCall + ".toString()));");
-                writer.println("        }");
-                break;
-
-            case ENUM:
-                writer.println("        if (" + getterCall + " != null) {");
-                writer.println("            attributes.put(\"" + fieldName +
-                    "\", MappingUtils.createStringAttribute(" + getterCall + ".name()));");
-                writer.println("        }");
-                break;
-
-            case STRING_LIST:
-                writer.println("        if (" + getterCall + " != null && !" + getterCall + ".isEmpty()) {");
-                writer.println("            attributes.put(\"" + fieldName +
-                    "\", AttributeValue.builder().ss(" + getterCall + ").build());");
-                writer.println("        }");
-                break;
-
-            case NESTED_NUMBER_LIST:
-                writer.println("        if (" + getterCall + " != null && !" + getterCall + ".isEmpty()) {");
-                writer.println("            List<AttributeValue> nestedList = " + getterCall + ".stream()");
-                writer.println("                .map(innerList -> innerList.stream()");
-                writer.println("                    .map(num -> AttributeValue.builder().n(String.valueOf(num)).build())");
-                writer.println("                    .collect(Collectors.toList()))");
-                writer.println("                .map(numList -> AttributeValue.builder().l(numList).build())");
-                writer.println("                .collect(Collectors.toList());");
-                writer.println("            if (!nestedList.isEmpty()) {");
-                writer.println("                attributes.put(\"" + fieldName +
-                    "\", AttributeValue.builder().l(nestedList).build());");
-                writer.println("            }");
-                writer.println("        }");
-                break;
-
-            case COMPLEX_OBJECT:
-                String mapperField = typeExtractor.getFieldNameForDependency(field.getMapperDependency());
-                writer.println("        if (" + getterCall + " != null) {");
-                writer.println("            AttributeValue " + fieldName + "Value = " + mapperField +
-                    ".toDynamoDbAttributeValue(" + getterCall + ");");
-                writer.println("            if (" + fieldName + "Value != null) {");
-                writer.println("                attributes.put(\"" + fieldName + "\", " + fieldName + "Value);");
-                writer.println("            }");
-                writer.println("        }");
-                break;
-
-            case COMPLEX_LIST:
-                String listMapperField = typeExtractor.getFieldNameForDependency(field.getMapperDependency());
-                writer.println("        if (" + getterCall + " != null && !" + getterCall + ".isEmpty()) {");
-                writer.println("            List<AttributeValue> " + fieldName + "List = " + getterCall + ".stream()");
-                writer.println("                .map(" + listMapperField + "::toDynamoDbAttributeValue)");
-                writer.println("                .filter(Objects::nonNull)");
-                writer.println("                .collect(Collectors.toList());");
-                writer.println("            if (!" + fieldName + "List.isEmpty()) {");
-                writer.println("                attributes.put(\"" + fieldName +
-                    "\", AttributeValue.builder().l(" + fieldName + "List).build());");
-                writer.println("            }");
-                writer.println("        }");
-                break;
-
-            case MAP:
-                writer.println("        // TODO: Implement MAP mapping for " + fieldName);
-                writer.println("        // if (" + getterCall + " != null) { ... }");
-                break;
-
-            default:
-                writer.println("        // Unsupported mapping strategy: " + field.getMappingStrategy());
-                break;
+        if (isPrimitive) {
+            return putStatement;
+        } else {
+            return CodeBlock.builder()
+                    .beginControlFlow("if ($L)", utils.createNullCheck(getterCall))
+                    .addStatement("$L", putStatement)
+                    .endControlFlow()
+                    .build();
         }
+    }
+
+    private CodeBlock generateNumberMapping(String fieldName, String getterCall, boolean isPrimitive) {
+        CodeBlock putStatement = CodeBlock.of("$L", utils.createAttributePut(fieldName, utils.createNumberAttribute(getterCall)));
+
+        if (isPrimitive) {
+            return putStatement;
+        } else {
+            return CodeBlock.builder()
+                    .beginControlFlow("if ($L)", utils.createNullCheck(getterCall))
+                    .addStatement("$L", putStatement)
+                    .endControlFlow()
+                    .build();
+        }
+    }
+
+    private CodeBlock generateBooleanMapping(String fieldName, String getterCall, boolean isPrimitive) {
+        CodeBlock putStatement = CodeBlock.of("$L", utils.createAttributePut(fieldName, utils.createBooleanAttribute(getterCall)));
+
+        if (isPrimitive) {
+            return putStatement;
+        } else {
+            return CodeBlock.builder()
+                    .beginControlFlow("if ($L)", utils.createNullCheck(getterCall))
+                    .addStatement("$L", putStatement)
+                    .endControlFlow()
+                    .build();
+        }
+    }
+
+    private CodeBlock generateInstantMapping(String fieldName, String getterCall) {
+        return CodeBlock.builder()
+                .beginControlFlow("if ($L)", utils.createNullCheck(getterCall))
+                .addStatement("$L", utils.createAttributePut(fieldName, utils.createStringAttribute(getterCall + ".toString()")))
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateEnumMapping(String fieldName, String getterCall) {
+        return CodeBlock.builder()
+                .beginControlFlow("if ($L)", utils.createNullCheck(getterCall))
+                .addStatement("$L", utils.createAttributePut(fieldName, utils.createStringAttribute(getterCall + ".name()")))
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateStringListMapping(String fieldName, String getterCall) {
+        return CodeBlock.builder()
+                .beginControlFlow("if ($L)", utils.createNullAndEmptyCheck(getterCall))
+                .addStatement("$L", utils.createAttributePut(fieldName, utils.createStringSetAttribute(getterCall)))
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateNestedNumberListMapping(String fieldName, String getterCall) {
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
+        ClassName list = ClassName.get(List.class);
+        ClassName collectors = ClassName.get(Collectors.class);
+
+        return CodeBlock.builder()
+                .beginControlFlow("if ($L)", utils.createNullAndEmptyCheck(getterCall))
+                .addStatement("$T<$T> nestedList = $L.stream()", list, attributeValue, getterCall)
+                .addStatement("    .map(innerList -> innerList.stream()")
+                .addStatement("        .map(num -> $T.builder().n($T.valueOf(num)).build())", attributeValue, String.class)
+                .addStatement("        .collect($T.toList()))", collectors)
+                .addStatement("    .map(numList -> $T.builder().l(numList).build())", attributeValue)
+                .addStatement("    .collect($T.toList())", collectors)
+                .beginControlFlow("if (!nestedList.isEmpty())")
+                .addStatement("$L", utils.createAttributePut(fieldName, utils.createListAttribute("nestedList")))
+                .endControlFlow()
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateComplexObjectMapping(FieldInfo field, String fieldName, String getterCall) {
+        String mapperField = utils.getFieldNameForDependency(field.getMapperDependency());
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
+
+        return CodeBlock.builder()
+                .beginControlFlow("if ($L)", utils.createNullCheck(getterCall))
+                .addStatement("$T $LValue = $L.toDynamoDbAttributeValue($L)", attributeValue, fieldName, mapperField, getterCall)
+                .beginControlFlow("if ($LValue != null)", fieldName)
+                .addStatement("attributes.put($S, $LValue)", fieldName, fieldName)
+                .endControlFlow()
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateComplexListMapping(FieldInfo field, String fieldName, String getterCall) {
+        String listMapperField = utils.getFieldNameForDependency(field.getMapperDependency());
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
+        ClassName list = ClassName.get(List.class);
+        ClassName objects = ClassName.get(Objects.class);
+        ClassName collectors = ClassName.get(Collectors.class);
+
+        return CodeBlock.builder()
+                .beginControlFlow("if ($L)", utils.createNullAndEmptyCheck(getterCall))
+                .addStatement("$T<$T> $LList = $L.stream()", list, attributeValue, fieldName, getterCall)
+                .addStatement("    .map($L::toDynamoDbAttributeValue)", listMapperField)
+                .addStatement("    .filter($T::nonNull)", objects)
+                .addStatement("    .collect($T.toList())", collectors)
+                .beginControlFlow("if (!$LList.isEmpty())", fieldName)
+                .addStatement("$L", utils.createAttributePut(fieldName, utils.createListAttribute(fieldName + "List")))
+                .endControlFlow()
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateMapMapping(String fieldName, String getterCall) {
+        return CodeBlock.builder()
+                .addStatement("// TODO: Implement MAP mapping for $L", fieldName)
+                .addStatement("// if ($L != null) { ... }", getterCall)
+                .build();
     }
 
     /**
      * Generates code to convert a DynamoDB AttributeValue to a domain object field.
      */
-    public void generateFromAttributeValueMapping(PrintWriter writer, FieldInfo field) {
+    public CodeBlock generateFromAttributeValueMapping(FieldInfo field) {
         String fieldName = field.getFieldName();
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
 
-        writer.println("        if (item.containsKey(\"" + fieldName + "\")) {");
-        writer.println("            AttributeValue " + fieldName + "Attr = item.get(\"" + fieldName + "\");");
+        CodeBlock mappingLogic = switch (field.getMappingStrategy()) {
+            case STRING -> generateStringDeserialization(fieldName);
+            case NUMBER -> generateNumberDeserialization(field, fieldName);
+            case BOOLEAN -> generateBooleanDeserialization(field, fieldName);
+            case INSTANT -> generateInstantDeserialization(fieldName);
+            case ENUM -> generateEnumDeserialization(field, fieldName);
+            case STRING_LIST -> generateStringListDeserialization(fieldName);
+            case NESTED_NUMBER_LIST -> generateNestedNumberListDeserialization(fieldName);
+            case COMPLEX_OBJECT -> generateComplexObjectDeserialization(field, fieldName);
+            case COMPLEX_LIST -> generateComplexListDeserialization(field, fieldName);
+            case MAP -> generateMapDeserialization(fieldName);
+            default -> CodeBlock.of("// Unsupported mapping strategy: $L\n", field.getMappingStrategy());
+        };
 
-        switch (field.getMappingStrategy()) {
-            case STRING:
-                writer.println("            String value = MappingUtils.getStringSafely(" + fieldName + "Attr);");
-                writer.println("            if (value != null) {");
-                writer.println("                builder." + fieldName + "(value);");
-                writer.println("            }");
-                break;
-
-            case NUMBER:
-                String numericMethod = typeExtractor.getNumericMethodForType(field.getFieldTypeName());
-                String javaType = typeExtractor.getJavaTypeForNumeric(field.getFieldTypeName());
-
-                if (field.isPrimitive()) {
-                    writer.println("            " + javaType + " value = MappingUtils." + numericMethod +
-                        "(" + fieldName + "Attr);");
-                    writer.println("            if (value != null) {");
-                    writer.println("                builder." + fieldName + "(value);");
-                    writer.println("            }");
-                } else {
-                    writer.println("            " + javaType + " value = MappingUtils." + numericMethod +
-                        "(" + fieldName + "Attr);");
-                    writer.println("            if (value != null) {");
-                    writer.println("                builder." + fieldName + "(value);");
-                    writer.println("            }");
-                }
-                break;
-
-            case BOOLEAN:
-                if (field.isPrimitive()) {
-                    writer.println("            if (" + fieldName + "Attr.bool() != null) {");
-                    writer.println("                builder." + fieldName + "(" + fieldName + "Attr.bool());");
-                    writer.println("            }");
-                } else {
-                    writer.println("            Boolean value = " + fieldName + "Attr.bool();");
-                    writer.println("            if (value != null) {");
-                    writer.println("                builder." + fieldName + "(value);");
-                    writer.println("            }");
-                }
-                break;
-
-            case INSTANT:
-                writer.println("            String value = MappingUtils.getStringSafely(" + fieldName + "Attr);");
-                writer.println("            if (value != null) {");
-                writer.println("                try {");
-                writer.println("                    builder." + fieldName + "(Instant.parse(value));");
-                writer.println("                } catch (Exception e) {");
-                writer.println("                    // Skip invalid instant value");
-                writer.println("                }");
-                writer.println("            }");
-                break;
-
-            case ENUM:
-                String enumType = typeExtractor.extractSimpleTypeName(field.getFieldTypeName());
-                writer.println("            String value = MappingUtils.getStringSafely(" + fieldName + "Attr);");
-                writer.println("            if (value != null) {");
-                writer.println("                try {");
-                writer.println("                    builder." + fieldName + "(" + enumType + ".valueOf(value));");
-                writer.println("                } catch (IllegalArgumentException e) {");
-                writer.println("                    // Skip invalid enum value");
-                writer.println("                }");
-                writer.println("            }");
-                break;
-
-            case STRING_LIST:
-                writer.println("            if (" + fieldName + "Attr.ss() != null) {");
-                writer.println("                builder." + fieldName + "(" + fieldName + "Attr.ss());");
-                writer.println("            }");
-                break;
-
-            case NESTED_NUMBER_LIST:
-                writer.println("            List<AttributeValue> nestedListValue = MappingUtils.getListSafely(" +
-                    fieldName + "Attr);");
-                writer.println("            if (nestedListValue != null) {");
-                writer.println("                List<List<Double>> coordinates = nestedListValue.stream()");
-                writer.println("                    .map(av -> {");
-                writer.println("                        List<AttributeValue> innerList = MappingUtils.getListSafely(av);");
-                writer.println("                        if (innerList != null) {");
-                writer.println("                            return innerList.stream()");
-                writer.println("                                .map(numAv -> MappingUtils.getDoubleSafely(numAv))");
-                writer.println("                                .filter(Objects::nonNull)");
-                writer.println("                                .collect(Collectors.toList());");
-                writer.println("                        }");
-                writer.println("                        return new ArrayList<Double>();");
-                writer.println("                    })");
-                writer.println("                    .filter(list -> !list.isEmpty())");
-                writer.println("                    .collect(Collectors.toList());");
-                writer.println("                if (!coordinates.isEmpty()) {");
-                writer.println("                    builder." + fieldName + "(coordinates);");
-                writer.println("                }");
-                writer.println("            }");
-                break;
-
-            case COMPLEX_OBJECT:
-                String mapperField = typeExtractor.getFieldNameForDependency(field.getMapperDependency());
-                writer.println("            " + typeExtractor.extractSimpleTypeName(field.getFieldTypeName()) +
-                    " value = " + mapperField + ".fromDynamoDbAttributeValue(" + fieldName + "Attr);");
-                writer.println("            if (value != null) {");
-                writer.println("                builder." + fieldName + "(value);");
-                writer.println("            }");
-                break;
-
-            case COMPLEX_LIST:
-                String listMapperField = typeExtractor.getFieldNameForDependency(field.getMapperDependency());
-                String elementType = typeExtractor.extractListElementType(field);
-                writer.println("            List<AttributeValue> listValue = MappingUtils.getListSafely(" +
-                    fieldName + "Attr);");
-                writer.println("            if (listValue != null) {");
-                writer.println("                List<" + elementType + "> " + fieldName + "List = listValue.stream()");
-                writer.println("                    .map(" + listMapperField + "::fromDynamoDbAttributeValue)");
-                writer.println("                    .filter(Objects::nonNull)");
-                writer.println("                    .collect(Collectors.toList());");
-                writer.println("                if (!" + fieldName + "List.isEmpty()) {");
-                writer.println("                    builder." + fieldName + "(" + fieldName + "List);");
-                writer.println("                }");
-                writer.println("            }");
-                break;
-
-            case MAP:
-                writer.println("            // TODO: Implement MAP mapping for " + fieldName);
-                break;
-
-            default:
-                writer.println("            // Unsupported mapping strategy: " + field.getMappingStrategy());
-                break;
-        }
-
-        writer.println("        }");
-        writer.println();
+        return CodeBlock.builder()
+                .beginControlFlow("if (item.containsKey($S))", fieldName)
+                .addStatement("$T $LAttr = item.get($S)", attributeValue, fieldName, fieldName)
+                .add(mappingLogic)
+                .endControlFlow()
+                .build();
     }
+
+    private CodeBlock generateStringDeserialization(String fieldName) {
+        ClassName mappingUtils = ClassName.get("com.github.wassertim.dynamodb.runtime", "MappingUtils");
+
+        return CodeBlock.builder()
+                .addStatement("$T value = $T.getStringSafely($LAttr)", String.class, mappingUtils, fieldName)
+                .beginControlFlow("if (value != null)")
+                .addStatement("builder.$L(value)", fieldName)
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateNumberDeserialization(FieldInfo field, String fieldName) {
+        ClassName mappingUtils = ClassName.get("com.github.wassertim.dynamodb.runtime", "MappingUtils");
+        String numericMethod = utils.getNumericMethodForType(field.getFieldTypeName());
+        String javaType = utils.getJavaTypeForNumeric(field.getFieldTypeName());
+
+        return CodeBlock.builder()
+                .addStatement("$L value = $T.$L($LAttr)", javaType, mappingUtils, numericMethod, fieldName)
+                .beginControlFlow("if (value != null)")
+                .addStatement("builder.$L(value)", fieldName)
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateBooleanDeserialization(FieldInfo field, String fieldName) {
+        if (field.isPrimitive()) {
+            return CodeBlock.builder()
+                    .beginControlFlow("if ($LAttr.bool() != null)", fieldName)
+                    .addStatement("builder.$L($LAttr.bool())", fieldName)
+                    .endControlFlow()
+                    .build();
+        } else {
+            return CodeBlock.builder()
+                    .addStatement("$T value = $LAttr.bool()", Boolean.class, fieldName)
+                    .beginControlFlow("if (value != null)")
+                    .addStatement("builder.$L(value)", fieldName)
+                    .endControlFlow()
+                    .build();
+        }
+    }
+
+    private CodeBlock generateInstantDeserialization(String fieldName) {
+        ClassName mappingUtils = ClassName.get("com.github.wassertim.dynamodb.runtime", "MappingUtils");
+
+        return CodeBlock.builder()
+                .addStatement("$T value = $T.getStringSafely($LAttr)", String.class, mappingUtils, fieldName)
+                .beginControlFlow("if (value != null)")
+                .add(utils.createInstantParseBlock("value", fieldName))
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateEnumDeserialization(FieldInfo field, String fieldName) {
+        ClassName mappingUtils = ClassName.get("com.github.wassertim.dynamodb.runtime", "MappingUtils");
+        ClassName enumType = ClassName.bestGuess(field.getFieldTypeName());
+
+        return CodeBlock.builder()
+                .addStatement("$T value = $T.getStringSafely($LAttr)", String.class, mappingUtils, fieldName)
+                .beginControlFlow("if (value != null)")
+                .add(utils.createEnumParseBlock(enumType.simpleName(), "value", fieldName))
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateStringListDeserialization(String fieldName) {
+        return CodeBlock.builder()
+                .beginControlFlow("if ($LAttr.ss() != null)", fieldName)
+                .addStatement("builder.$L($LAttr.ss())", fieldName, fieldName)
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateNestedNumberListDeserialization(String fieldName) {
+        ClassName mappingUtils = ClassName.get("com.github.wassertim.dynamodb.runtime", "MappingUtils");
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
+        ClassName list = ClassName.get(List.class);
+        ClassName objects = ClassName.get(Objects.class);
+        ClassName collectors = ClassName.get(Collectors.class);
+        ClassName arrayList = ClassName.get(ArrayList.class);
+
+        return CodeBlock.builder()
+                .addStatement("$T<$T> nestedListValue = $T.getListSafely($LAttr)", list, attributeValue, mappingUtils, fieldName)
+                .beginControlFlow("if (nestedListValue != null)")
+                .addStatement("$T<$T<$T>> coordinates = nestedListValue.stream()", list, list, Double.class)
+                .addStatement("    .map(av -> {")
+                .addStatement("        $T<$T> innerList = $T.getListSafely(av)", list, attributeValue, mappingUtils)
+                .addStatement("        if (innerList != null) {")
+                .addStatement("            return innerList.stream()")
+                .addStatement("                .map(numAv -> $T.getDoubleSafely(numAv))", mappingUtils)
+                .addStatement("                .filter($T::nonNull)", objects)
+                .addStatement("                .collect($T.toList())", collectors)
+                .addStatement("        }")
+                .addStatement("        return new $T<$T>()", arrayList, Double.class)
+                .addStatement("    })")
+                .addStatement("    .filter(list -> !list.isEmpty())")
+                .addStatement("    .collect($T.toList())", collectors)
+                .beginControlFlow("if (!coordinates.isEmpty())")
+                .addStatement("builder.$L(coordinates)", fieldName)
+                .endControlFlow()
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateComplexObjectDeserialization(FieldInfo field, String fieldName) {
+        String mapperField = utils.getFieldNameForDependency(field.getMapperDependency());
+        ClassName complexType = ClassName.bestGuess(field.getFieldTypeName());
+
+        return CodeBlock.builder()
+                .addStatement("$T value = $L.fromDynamoDbAttributeValue($LAttr)", complexType, mapperField, fieldName)
+                .beginControlFlow("if (value != null)")
+                .addStatement("builder.$L(value)", fieldName)
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateComplexListDeserialization(FieldInfo field, String fieldName) {
+        ClassName mappingUtils = ClassName.get("com.github.wassertim.dynamodb.runtime", "MappingUtils");
+        String listMapperField = utils.getFieldNameForDependency(field.getMapperDependency());
+        String elementType = utils.extractListElementType(field);
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
+        ClassName list = ClassName.get(List.class);
+        ClassName objects = ClassName.get(Objects.class);
+        ClassName collectors = ClassName.get(Collectors.class);
+
+        return CodeBlock.builder()
+                .addStatement("$T<$T> listValue = $T.getListSafely($LAttr)", list, attributeValue, mappingUtils, fieldName)
+                .beginControlFlow("if (listValue != null)")
+                .addStatement("$T<$L> $LList = listValue.stream()", list, elementType, fieldName)
+                .addStatement("    .map($L::fromDynamoDbAttributeValue)", listMapperField)
+                .addStatement("    .filter($T::nonNull)", objects)
+                .addStatement("    .collect($T.toList())", collectors)
+                .beginControlFlow("if (!$LList.isEmpty())", fieldName)
+                .addStatement("builder.$L($LList)", fieldName, fieldName)
+                .endControlFlow()
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateMapDeserialization(String fieldName) {
+        return CodeBlock.builder()
+                .addStatement("// TODO: Implement MAP mapping for $L", fieldName)
+                .build();
+    }
+
 }

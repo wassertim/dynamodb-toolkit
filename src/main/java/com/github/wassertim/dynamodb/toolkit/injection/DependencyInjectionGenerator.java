@@ -1,12 +1,15 @@
 package com.github.wassertim.dynamodb.toolkit.injection;
 
-import java.io.PrintWriter;
-import java.util.Set;
-
+import com.palantir.javapoet.*;
 import com.github.wassertim.dynamodb.toolkit.analysis.TypeInfo;
 import com.github.wassertim.dynamodb.toolkit.analysis.TypeExtractor;
+import javax.lang.model.element.Modifier;
+import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
+ * JavaPoet-based CDI dependency injection code generator for mapper classes.
  * Generates CDI dependency injection code for mapper classes.
  * Handles constructor-based dependency injection for mapper dependencies.
  */
@@ -19,52 +22,43 @@ public class DependencyInjectionGenerator {
     }
 
     /**
-     * Generates dependency injection fields and constructor for a mapper class.
+     * Generates dependency injection fields for a mapper class using JavaPoet.
      */
-    public void generateConstructorAndFields(PrintWriter writer, TypeInfo typeInfo, Set<String> dependencies) {
-        if (dependencies.isEmpty()) {
-            writer.println("    // No dependencies required");
-            writer.println();
-            return;
-        }
+    public List<FieldSpec> generateDependencyFields(Set<String> dependencies) {
+        List<FieldSpec> fields = new ArrayList<>();
 
-        // Generate dependency fields
-        generateDependencyFields(writer, dependencies);
-        writer.println();
-
-        // Generate constructor
-        generateConstructor(writer, typeInfo, dependencies);
-        writer.println();
-    }
-
-    private void generateDependencyFields(PrintWriter writer, Set<String> dependencies) {
         for (String dependency : dependencies) {
             String simpleClassName = typeExtractor.extractSimpleTypeName(dependency);
             String fieldName = typeExtractor.getFieldNameForDependency(dependency);
-            writer.println("    private final " + simpleClassName + " " + fieldName + ";");
+
+            FieldSpec dependencyField = FieldSpec.builder(
+                    ClassName.bestGuess(simpleClassName),
+                    fieldName,
+                    Modifier.PRIVATE, Modifier.FINAL)
+                    .build();
+            fields.add(dependencyField);
         }
+
+        return fields;
     }
 
-    private void generateConstructor(PrintWriter writer, TypeInfo typeInfo, Set<String> dependencies) {
-        String mapperClassName = typeInfo.getMapperClassName();
+    /**
+     * Generates dependency injection constructor for a mapper class using JavaPoet.
+     */
+    public MethodSpec generateConstructor(TypeInfo typeInfo, Set<String> dependencies) {
+        MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder()
+                .addModifiers(Modifier.PUBLIC);
 
-        // Constructor signature
-        writer.print("    public " + mapperClassName + "(");
-        String[] dependencyArray = dependencies.toArray(new String[0]);
-        for (int i = 0; i < dependencyArray.length; i++) {
-            if (i > 0) writer.print(", ");
-            String dependency = dependencyArray[i];
+        for (String dependency : dependencies) {
             String simpleClassName = typeExtractor.extractSimpleTypeName(dependency);
             String fieldName = typeExtractor.getFieldNameForDependency(dependency);
-            writer.print(simpleClassName + " " + fieldName);
-        }
-        writer.println(") {");
 
-        // Constructor body - field assignments
-        for (String dependency : dependencies) {
-            String fieldName = typeExtractor.getFieldNameForDependency(dependency);
-            writer.println("        this." + fieldName + " = " + fieldName + ";");
+            constructorBuilder.addParameter(ClassName.bestGuess(simpleClassName), fieldName);
+            constructorBuilder.addStatement("this.$L = $L", fieldName, fieldName);
         }
-        writer.println("    }");
+
+        return constructorBuilder.build();
     }
+
+
 }
