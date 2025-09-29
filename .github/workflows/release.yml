@@ -140,7 +140,7 @@ jobs:
           <dependency>
               <groupId>com.github.wassertim</groupId>
               <artifactId>dynamodb-toolkit</artifactId>
-              <version>v${{ env.NEW_VERSION }}</version>
+              <version>${{ env.NEW_VERSION }}</version>
           </dependency>
           ```
 
@@ -186,7 +186,7 @@ jobs:
 
               # Now that JitPack succeeded, update README with new version
               echo "📝 Updating README.md with confirmed working version..."
-              sed -i "s/<version>v[^<]*<\/version>/<version>v$NEW_VERSION<\/version>/" README.md
+              sed -i "s/<version>[^<]*<\/version>/<version>$NEW_VERSION<\/version>/" README.md
 
               # Check if README actually changed
               if git diff --quiet README.md; then
