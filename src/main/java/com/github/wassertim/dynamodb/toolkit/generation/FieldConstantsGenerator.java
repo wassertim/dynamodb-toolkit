@@ -1,78 +1,100 @@
 package com.github.wassertim.dynamodb.toolkit.generation;
 
-import com.palantir.javapoet.FieldSpec;
-import com.palantir.javapoet.MethodSpec;
-import com.palantir.javapoet.TypeSpec;
-import com.github.wassertim.dynamodb.toolkit.analysis.TypeInfo;
-import com.github.wassertim.dynamodb.toolkit.analysis.FieldInfo;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.time.Instant;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
-import javax.lang.model.element.Modifier;
-import java.io.IOException;
+import javax.tools.Diagnostic;
+import javax.tools.JavaFileObject;
+
+import com.github.wassertim.dynamodb.toolkit.analysis.TypeInfo;
+import com.github.wassertim.dynamodb.toolkit.analysis.FieldInfo;
 
 /**
- * JavaPoet-based implementation of field constants generator.
  * Generates field constant classes containing type-safe field name constants
  * for DynamoDB operations. These constants eliminate hardcoded strings in
  * queries and provide compile-time safety for field references.
  */
-public class FieldConstantsGenerator extends AbstractJavaPoetGenerator {
+public class FieldConstantsGenerator {
+
+    private final Filer filer;
+    private final Messager messager;
 
     public FieldConstantsGenerator(Filer filer, Messager messager) {
-        super(filer, messager);
+        this.filer = filer;
+        this.messager = messager;
     }
 
     /**
      * Generates a field constants class for the given type information.
      */
     public void generateFieldConstants(TypeInfo typeInfo) throws IOException {
-        String packageName = getTargetPackage(typeInfo);
+        String packageName = getFieldConstantsPackage(typeInfo);
         String constantsClassName = typeInfo.getClassName() + "Fields";
+        String fullyQualifiedConstantsName = packageName + "." + constantsClassName;
 
-        TypeSpec constantsClass = buildFieldConstantsClass(typeInfo, constantsClassName);
-        writeJavaFile(packageName, constantsClass);
+        JavaFileObject sourceFile = filer.createSourceFile(fullyQualifiedConstantsName);
+
+        try (PrintWriter writer = new PrintWriter(sourceFile.openWriter())) {
+            generateFieldConstantsClass(writer, typeInfo, constantsClassName);
+        }
+
+        messager.printMessage(Diagnostic.Kind.NOTE,
+                "Generated field constants: " + fullyQualifiedConstantsName);
     }
 
-    private TypeSpec buildFieldConstantsClass(TypeInfo typeInfo, String constantsClassName) {
+    private void generateFieldConstantsClass(PrintWriter writer, TypeInfo typeInfo, String constantsClassName) {
         String className = typeInfo.getClassName();
+        String packageName = getFieldConstantsPackage(typeInfo);
 
-        TypeSpec.Builder classBuilder = TypeSpec.classBuilder(constantsClassName)
-                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                .addJavadoc(createGeneratedJavadoc(
-                        "Generated field constants for " + className + ".\n" +
-                        "Provides type-safe field name constants for DynamoDB operations,\n" +
-                        "eliminating hardcoded strings and enabling compile-time validation."
-                ));
+        // Package declaration
+        writer.println("package " + packageName + ";");
+        writer.println();
 
-        // Add private constructor
-        MethodSpec constructor = MethodSpec.constructorBuilder()
-                .addModifiers(Modifier.PRIVATE)
-                .addComment("Utility class - prevent instantiation")
-                .build();
-        classBuilder.addMethod(constructor);
+        // Class declaration with documentation
+        generateClassDeclaration(writer, className, constantsClassName);
 
         // Generate field constants
         for (FieldInfo field : typeInfo.getFields()) {
-            FieldSpec fieldConstant = createFieldConstant(field);
-            classBuilder.addField(fieldConstant);
+            generateFieldConstant(writer, field);
         }
 
-        return classBuilder.build();
+        // Close class
+        writer.println("}");
     }
 
-    private FieldSpec createFieldConstant(FieldInfo field) {
+    private void generateClassDeclaration(PrintWriter writer, String className, String constantsClassName) {
+        writer.println("/**");
+        writer.println(" * Generated field constants for " + className + ".");
+        writer.println(" * Provides type-safe field name constants for DynamoDB operations,");
+        writer.println(" * eliminating hardcoded strings and enabling compile-time validation.");
+        writer.println(" * Generated at: " + Instant.now());
+        writer.println(" */");
+        writer.println("public final class " + constantsClassName + " {");
+        writer.println();
+        writer.println("    private " + constantsClassName + "() {");
+        writer.println("        // Utility class - prevent instantiation");
+        writer.println("    }");
+        writer.println();
+    }
+
+    private void generateFieldConstant(PrintWriter writer, FieldInfo field) {
         String fieldName = field.getFieldName();
 
-        return FieldSpec.builder(String.class, fieldName)
-                .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
-                .initializer("$S", fieldName)
-                .addJavadoc("Field name constant for '$L' field.\n", fieldName)
-                .build();
+        writer.println("    /**");
+        writer.println("     * Field name constant for '" + fieldName + "' field.");
+        writer.println("     */");
+        writer.println("    public static final String " + fieldName + " = \"" + fieldName + "\";");
+        writer.println();
     }
 
-    @Override
-    protected String getTargetPackage(TypeInfo typeInfo) {
+    /**
+     * Determines the package name for field constants.
+     * Uses the fields package under the toolkit namespace.
+     */
+    private String getFieldConstantsPackage(TypeInfo typeInfo) {
         return "com.github.wassertim.dynamodb.toolkit.fields";
     }
 }
