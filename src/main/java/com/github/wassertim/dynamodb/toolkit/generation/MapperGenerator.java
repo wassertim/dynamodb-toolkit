@@ -171,12 +171,18 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
     }
 
     private void addConvenienceMethods(TypeSpec.Builder classBuilder, TypeInfo typeInfo) {
+        classBuilder.addMethod(buildFromDynamoDbItemMethod(typeInfo));
+        classBuilder.addMethod(buildFromDynamoDbItemsMethod(typeInfo));
+        classBuilder.addMethod(buildToDynamoDbItemMethod(typeInfo));
+        classBuilder.addMethod(buildToDynamoDbItemsMethod(typeInfo));
+    }
+
+    private MethodSpec buildFromDynamoDbItemMethod(TypeInfo typeInfo) {
         String className = typeInfo.getClassName();
         ClassName attributeValue = ClassName.get(AttributeValue.class);
         ClassName domainClass = ClassName.bestGuess(typeInfo.getFullyQualifiedClassName());
 
-        // fromDynamoDbItem method
-        MethodSpec fromDynamoDbItem = MethodSpec.methodBuilder("fromDynamoDbItem")
+        return MethodSpec.methodBuilder("fromDynamoDbItem")
                 .addModifiers(Modifier.PUBLIC)
                 .returns(ParameterizedTypeName.get(ClassName.get("java.util", "Optional"), domainClass))
                 .addParameter(ParameterizedTypeName.get(
@@ -195,9 +201,14 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                     domainClass, attributeValue)
                 .addStatement("return $T.ofNullable(result)", ClassName.get("java.util", "Optional"))
                 .build();
+    }
 
-        // fromDynamoDbItems method
-        MethodSpec fromDynamoDbItems = MethodSpec.methodBuilder("fromDynamoDbItems")
+    private MethodSpec buildFromDynamoDbItemsMethod(TypeInfo typeInfo) {
+        String className = typeInfo.getClassName();
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
+        ClassName domainClass = ClassName.bestGuess(typeInfo.getFullyQualifiedClassName());
+
+        return MethodSpec.methodBuilder("fromDynamoDbItems")
                 .addModifiers(Modifier.PUBLIC)
                 .returns(ParameterizedTypeName.get(ClassName.get(List.class), domainClass))
                 .addParameter(ParameterizedTypeName.get(
@@ -221,9 +232,14 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                     ".collect($T.toList())$<$<$<$<",
                     attributeValue, ClassName.get(Objects.class), ClassName.get(Collectors.class))
                 .build();
+    }
 
-        // toDynamoDbItem method
-        MethodSpec toDynamoDbItem = MethodSpec.methodBuilder("toDynamoDbItem")
+    private MethodSpec buildToDynamoDbItemMethod(TypeInfo typeInfo) {
+        String className = typeInfo.getClassName();
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
+        ClassName domainClass = ClassName.bestGuess(typeInfo.getFullyQualifiedClassName());
+
+        return MethodSpec.methodBuilder("toDynamoDbItem")
                 .addModifiers(Modifier.PUBLIC)
                 .returns(ParameterizedTypeName.get(
                     ClassName.get(Map.class),
@@ -241,9 +257,14 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                 .addStatement("$T av = toDynamoDbAttributeValue(object)", attributeValue)
                 .addStatement("return av != null ? av.m() : null")
                 .build();
+    }
 
-        // toDynamoDbItems method
-        MethodSpec toDynamoDbItems = MethodSpec.methodBuilder("toDynamoDbItems")
+    private MethodSpec buildToDynamoDbItemsMethod(TypeInfo typeInfo) {
+        String className = typeInfo.getClassName();
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
+        ClassName domainClass = ClassName.bestGuess(typeInfo.getFullyQualifiedClassName());
+
+        return MethodSpec.methodBuilder("toDynamoDbItems")
                 .addModifiers(Modifier.PUBLIC)
                 .returns(ParameterizedTypeName.get(
                     ClassName.get(List.class),
@@ -268,11 +289,6 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                     ".collect($T.toList())$<$<$<$<$<",
                     ClassName.get(Objects.class), ClassName.get(Collectors.class))
                 .build();
-
-        classBuilder.addMethod(fromDynamoDbItem);
-        classBuilder.addMethod(fromDynamoDbItems);
-        classBuilder.addMethod(toDynamoDbItem);
-        classBuilder.addMethod(toDynamoDbItems);
     }
 
     @Override
