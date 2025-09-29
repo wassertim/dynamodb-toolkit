@@ -23,6 +23,7 @@
         <!-- Dependency versions -->
         <aws.sdk.version>2.29.39</aws.sdk.version>
         <jakarta.enterprise.version>4.1.0</jakarta.enterprise.version>
+        <javapoet.version>0.7.0</javapoet.version>
         <junit.version>5.11.4</junit.version>
         <assertj.version>3.26.3</assertj.version>
     </properties>
@@ -48,6 +49,13 @@
             <artifactId>auto-service</artifactId>
             <version>1.1.1</version>
             <optional>true</optional>
+        </dependency>
+
+        <!-- Code generation -->
+        <dependency>
+            <groupId>com.palantir.javapoet</groupId>
+            <artifactId>javapoet</artifactId>
+            <version>${javapoet.version}</version>
         </dependency>
 
         <!-- Test dependencies -->

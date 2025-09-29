@@ -1,5 +1,5 @@
-# Use official Maven image with Eclipse Temurin Java 25
-FROM maven:3.9.11-eclipse-temurin-25
+# Use official Maven image with Eclipse Temurin Java 21 LTS
+FROM maven:3.9.11-eclipse-temurin-21
 
 # Install unzip, zsh and other tools needed
 RUN apt-get update && apt-get install -y \
