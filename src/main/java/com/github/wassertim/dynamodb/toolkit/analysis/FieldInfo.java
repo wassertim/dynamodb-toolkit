@@ -72,6 +72,7 @@ public class FieldInfo {
         INSTANT,          // Instant timestamp mapping
         ENUM,             // Enum name mapping
         STRING_LIST,      // List<String> mapping
+        NUMBER_LIST,      // List<Integer>, List<Double>, etc. mapping
         NESTED_NUMBER_LIST, // List<List<Double>> mapping for coordinates
         COMPLEX_OBJECT,   // Nested object requiring mapper
         COMPLEX_LIST,     // List<ComplexObject> requiring mapper
