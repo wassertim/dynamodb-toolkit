@@ -111,7 +111,7 @@ Add the JitPack repository and dependency to your Maven build:
 <dependency>
     <groupId>com.github.wassertim</groupId>
     <artifactId>dynamodb-toolkit</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
 </dependency>
 ```
 
