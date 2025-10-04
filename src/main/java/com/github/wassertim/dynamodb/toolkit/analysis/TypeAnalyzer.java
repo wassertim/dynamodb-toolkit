@@ -119,9 +119,11 @@ public class TypeAnalyzer {
         if (isListType(fieldType)) {
             TypeMirror elementType = getListElementType(fieldType);
             if (elementType != null) {
-                String elementTypeName = elementType.toString();
+                String elementTypeName = getCleanTypeName(elementType);
                 if (isStringType(elementTypeName)) {
                     return FieldInfo.MappingStrategy.STRING_LIST;
+                } else if (isNumberType(elementTypeName) || isNumericPrimitive(elementType)) {
+                    return FieldInfo.MappingStrategy.NUMBER_LIST;
                 } else if (isNestedNumberList(elementType)) {
                     return FieldInfo.MappingStrategy.NESTED_NUMBER_LIST;
                 } else if (hasDynamoMappableAnnotation(elementType)) {

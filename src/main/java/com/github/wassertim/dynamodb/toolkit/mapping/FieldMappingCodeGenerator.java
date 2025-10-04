@@ -38,6 +38,7 @@ public class FieldMappingCodeGenerator {
             case INSTANT -> generateInstantMapping(fieldName, getterCall);
             case ENUM -> generateEnumMapping(fieldName, getterCall);
             case STRING_LIST -> generateStringListMapping(fieldName, getterCall);
+            case NUMBER_LIST -> generateNumberListMapping(fieldName, getterCall);
             case NESTED_NUMBER_LIST -> generateNestedNumberListMapping(fieldName, getterCall);
             case COMPLEX_OBJECT -> generateComplexObjectMapping(field, fieldName, getterCall);
             case COMPLEX_LIST -> generateComplexListMapping(field, fieldName, getterCall);
@@ -118,6 +119,21 @@ public class FieldMappingCodeGenerator {
                 .build();
     }
 
+    private CodeBlock generateNumberListMapping(String fieldName, String getterCall) {
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
+        ClassName list = ClassName.get(List.class);
+        ClassName collectors = ClassName.get(Collectors.class);
+
+        return CodeBlock.builder()
+                .beginControlFlow("if ($L)", utils.createNullCheck(getterCall))
+                .add("$T<$T> $LList = $L.stream()\n", list, attributeValue, fieldName, getterCall)
+                .add("    .map(val -> $T.builder().n($T.valueOf(val)).build())\n", attributeValue, String.class)
+                .addStatement("    .collect($T.toList())", collectors)
+                .addStatement("$L", utils.createAttributePut(fieldName, utils.createListAttribute(fieldName + "List")))
+                .endControlFlow()
+                .build();
+    }
+
     private CodeBlock generateNestedNumberListMapping(String fieldName, String getterCall) {
         ClassName attributeValue = ClassName.get(AttributeValue.class);
         ClassName list = ClassName.get(List.class);
@@ -193,6 +209,7 @@ public class FieldMappingCodeGenerator {
             case INSTANT -> generateInstantDeserialization(fieldName);
             case ENUM -> generateEnumDeserialization(field, fieldName);
             case STRING_LIST -> generateStringListDeserialization(fieldName);
+            case NUMBER_LIST -> generateNumberListDeserialization(field, fieldName);
             case NESTED_NUMBER_LIST -> generateNestedNumberListDeserialization(fieldName);
             case COMPLEX_OBJECT -> generateComplexObjectDeserialization(field, fieldName);
             case COMPLEX_LIST -> generateComplexListDeserialization(field, fieldName);
@@ -276,6 +293,30 @@ public class FieldMappingCodeGenerator {
         return CodeBlock.builder()
                 .beginControlFlow("if ($LAttr.ss() != null)", fieldName)
                 .addStatement("builder.$L($LAttr.ss())", fieldName, fieldName)
+                .endControlFlow()
+                .build();
+    }
+
+    private CodeBlock generateNumberListDeserialization(FieldInfo field, String fieldName) {
+        ClassName mappingUtils = ClassName.get("com.github.wassertim.dynamodb.runtime", "MappingUtils");
+        ClassName attributeValue = ClassName.get(AttributeValue.class);
+        ClassName list = ClassName.get(List.class);
+        ClassName objects = ClassName.get(Objects.class);
+        ClassName collectors = ClassName.get(Collectors.class);
+
+        // Determine the element type from the field
+        String elementTypeQualified = utils.extractListElementQualifiedType(field);
+        String numericMethod = utils.getNumericMethodForType(elementTypeQualified);
+        String javaType = utils.getJavaTypeForNumeric(elementTypeQualified);
+
+        return CodeBlock.builder()
+                .addStatement("$T<$T> listValue = $T.getListSafely($LAttr)", list, attributeValue, mappingUtils, fieldName)
+                .beginControlFlow("if (listValue != null)")
+                .add("$T<$L> $LList = listValue.stream()\n", list, javaType, fieldName)
+                .add("    .map($T::$L)\n", mappingUtils, numericMethod)
+                .add("    .filter($T::nonNull)\n", objects)
+                .addStatement("    .collect($T.toList())", collectors)
+                .addStatement("builder.$L($LList)", fieldName, fieldName)
                 .endControlFlow()
                 .build();
     }
