@@ -61,6 +61,9 @@ public class AnnotationProcessor extends AbstractProcessor {
     private FieldConstantsGenerator fieldConstantsGenerator;
     private TableNameResolverGenerator tableNameResolverGenerator;
 
+    // Track processed types to avoid reprocessing in subsequent rounds
+    private final Set<String> processedTypes = new java.util.HashSet<>();
+
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
@@ -79,7 +82,25 @@ public class AnnotationProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        // Skip processing if annotations are empty
         if (annotations.isEmpty()) {
+            return false;
+        }
+
+        // CRITICAL FIX: Only process in the first round, skip all subsequent rounds
+        // This prevents multi-round processing bugs where type information changes between rounds
+        if (!roundEnv.processingOver() && roundEnv.getRootElements().isEmpty()) {
+            // This is a subsequent round with no new source files - skip it
+            return false;
+        }
+
+        // Skip the final processing-over round
+        if (roundEnv.processingOver()) {
+            return false;
+        }
+
+        // Only process if we haven't processed anything yet (first round only)
+        if (!processedTypes.isEmpty()) {
             return false;
         }
 
@@ -89,6 +110,11 @@ public class AnnotationProcessor extends AbstractProcessor {
 
             // Collect all @Table annotated elements
             Set<? extends Element> tableElements = roundEnv.getElementsAnnotatedWith(Table.class);
+
+            // Mark all types as processed
+            for (Element element : annotatedElements) {
+                processedTypes.add(((TypeElement) element).getQualifiedName().toString());
+            }
 
             // If no annotations to process, return false
             if (annotatedElements.isEmpty() && tableElements.isEmpty()) {
