@@ -55,7 +55,8 @@ public class MapperGenerator extends AbstractJavaPoetGenerator {
                 .addAnnotation(ApplicationScoped.class)
                 .addJavadoc(createGeneratedJavadoc(
                         "Generated DynamoDB mapper for " + className + ".\n" +
-                        "Provides bidirectional conversion between " + className + " and DynamoDB AttributeValue."
+                        "Provides bidirectional conversion between " + className + " and DynamoDB AttributeValue.\n" +
+                        "DEBUG_MARKER: Local build verification - " + System.currentTimeMillis()
                 ));
 
         // Add dependency injection (fields and constructor)
